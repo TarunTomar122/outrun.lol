@@ -16,6 +16,7 @@ export type Session = {
   expiresAt: number;
   scope: string;
   demo?: boolean;
+  anonymous?: boolean;
   entry?: Entry;
 };
 
@@ -25,6 +26,7 @@ export type Entry = {
   name: string;
   avatar?: string;
   link: string;
+  proofLink?: string;
   headline: string;
   category: string;
   distanceKm: number;

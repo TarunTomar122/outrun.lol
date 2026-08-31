@@ -46,6 +46,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState("");
+  const [proofLink, setProofLink] = useState("");
   const [link, setLink] = useState("");
   const [headline, setHeadline] = useState("");
   const [profileCategory, setProfileCategory] = useState("Road");
@@ -58,6 +59,7 @@ export default function Home() {
     setEntries(leaderboard.entries);
     setMe(profile);
     if (profile.entry) {
+      setProofLink(profile.entry.proofLink ?? "");
       setLink(profile.entry.link);
       setHeadline(profile.entry.headline);
       setProfileCategory(profile.entry.category);
@@ -115,9 +117,8 @@ export default function Home() {
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    if (!me?.connected) return setStatus("Connect Strava before claiming a spot.");
-    setStatus("Saving your spot…");
-    const response = await fetch("/api/profile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ link, headline, category: profileCategory }) });
+    setStatus("Publishing your result…");
+    const response = await fetch("/api/profile", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ proofLink, link, headline, category: profileCategory }) });
     const result = await response.json();
     if (!response.ok) return setStatus(result.error ?? "Could not save your spot.");
     setStatus("Your spot is live.");
@@ -138,24 +139,30 @@ export default function Home() {
       <div className="live-pill"><span>● {runnerCount || 0} runners</span> · {visitorCount.toLocaleString()} visitors · <a href="#about">see stats→</a></div>
       <PeriodToggle period={period} onChange={changePeriod} className="period-mobile" />
       <h1>Claim #1 for <span className="stepper"><button aria-label="Lower distance to beat" onClick={() => setTargetDistance(Number(Math.max(0, beatDistance - 0.1).toFixed(1)))}>−</button><b>{distance(beatDistance)}</b><button aria-label="Raise distance to beat" onClick={() => setTargetDistance(Number((beatDistance + 0.1).toFixed(1)))}>+</button></span></h1>
-      <p className="intro-copy">Run further than the rest, climb the daily board, and put one link in front of everyone who’s watching. Your distance decides the rank.</p>
+      <p className="intro-copy">Run further than the rest, link today’s activity, and put one link in front of everyone who’s watching. Verified distance decides the rank.</p>
     </section>
 
     <section id="claim" className="claim-block">
-      <form onSubmit={save}>
-        <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
-        <label className="category-field"><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)} aria-label="Category">{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select><span aria-hidden="true">⌄</span></label>
-        {me?.connected ? <button className="claim-button" type="submit">Publish spot</button> : <a className="claim-button" href="/api/strava/connect">Connect Strava</a>}
+      <form className="claim-form" onSubmit={save}>
+        <div className="claim-row runner-row">
+          <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Public Strava activity link" type="url" required aria-label="Public Strava activity link" /></label>
+          <span className="verification-note">We read the athlete, date, type, and distance from the public activity.</span>
+        </div>
+        <div className="claim-row publish-row">
+          <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
+          <label className="category-field"><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)} aria-label="Category">{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select><span aria-hidden="true">⌄</span></label>
+          <button className="claim-button" type="submit">{me?.entry ? "Update result" : "Publish result"}</button>
+        </div>
       </form>
-      <div className="claim-subline"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>{status || "Clicks and visitors are counted on every link."}</span>{me?.connected && <button className="sync-button" type="button" onClick={() => void sync()} disabled={syncing}>{syncing ? "Syncing…" : "Sync today"}</button>}</div>
+      <div className="claim-subline"><span>{me?.entry ? "Your result is live for today." : "No account required. Public activity verification."}</span><span>{status || "Distance is read from the linked activity."}</span>{me?.connected && <button className="sync-button" type="button" onClick={() => void sync()} disabled={syncing}>{syncing ? "Syncing…" : "Sync today"}</button>}</div>
     </section>
 
     <section id="categories" className="category-strip"><nav aria-label="Ranking categories">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item === "All" && <span>⊞</span>}{item}</button>)}<button className="explore">Explore <span>›</span></button></nav></section>
 
     <section id="board" className="ranking-list" aria-label="Top runners">
-      {loading ? <div className="empty-state">Loading today’s runners…</div> : top.map((entry, index) => <a className={`rank-card card-${index + 1}`} href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={entry.id}>
-        <span className="rank-badge">#{index + 1}</span><span className="rank-avatar">{initials(entry.name)}</span><span className="rank-copy"><b>{entry.name} · {host(entry.link)}</b><span>{entry.headline}</span><small><strong>{entry.category}</strong> · {timeSince(entry.updatedAt)} · {host(entry.link)} · {entry.clicks.toLocaleString()} clicks · see details</small></span><strong className="rank-distance">{distance(entry.distanceKm)}</strong>
-      </a>)}
+      {loading ? <div className="empty-state">Loading today’s runners…</div> : top.map((entry, index) => <div className={`rank-card card-${index + 1}`} key={entry.id}>
+        <span className="rank-badge">#{index + 1}</span><span className="rank-avatar">{initials(entry.name)}</span><a className="rank-copy" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer"><b>{entry.name} · {host(entry.link)}</b><span>{entry.headline}</span><small><strong>{entry.category}</strong> · {timeSince(entry.updatedAt)} · {host(entry.link)} · {entry.clicks.toLocaleString()} clicks · promote</small></a><strong className="rank-distance">{distance(entry.distanceKm)}</strong>{entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
+      </div>)}
     </section>
 
     <section id="daily" className="daily-preview">
@@ -165,8 +172,8 @@ export default function Home() {
 
     <section className="activity"><h2><span /> Latest activity</h2><div className="activity-list">{entries.slice(0, 5).map((entry, index) => <a href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={`${entry.id}-activity`}><span>{entry.name} claimed #{index + 1}</span><small>{distance(entry.distanceKm)} · {timeSince(entry.updatedAt)}</small><b>↗</b></a>)}</div></section>
 
-    <section id="about" className="about"><p>This <a href="#rules">simple side project</a> turns today’s running miles into a public place to be seen.</p><div id="rules" className="about-grid"><p><b>01</b> Connect Strava. We read your running activities for today only.</p><p><b>02</b> Your total distance sets your place. Ties go to the latest sync.</p><p><b>03</b> Add one link. Every click and visitor is counted.</p></div></section>
+    <section id="about" className="about"><p>This <a href="#rules">simple side project</a> turns today’s running miles into a public place to be seen.</p><div id="rules" className="about-grid"><p><b>01</b> Link a public Run from today. We verify its date, type, and distance.</p><p><b>02</b> Your verified distance sets your place. Ties go to the latest submission.</p><p><b>03</b> Add one link. Every click and visitor is counted.</p></div></section>
     <footer><a href="#top" className="logo"><span className="logo-glyph"><i /><i /><i /></span>outrun.lol</a><span>Built for the daily miles.</span><span><a href="#rules">Rules</a> · <a href="mailto:hello@outrun.lol">Say hello</a></span></footer>
-    {!me?.connected && <div className="demo-float"><button onClick={() => void demo()}>Try demo mode</button>{!me?.configured && <small>Strava OAuth is ready — add app keys in Vercel to connect for real.</small>}</div>}
+    {!me?.entry && <div className="demo-float"><button onClick={() => void demo()}>Try demo mode</button><small>Or load a sample result.</small></div>}
   </main>;
 }

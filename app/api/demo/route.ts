@@ -18,6 +18,6 @@ export async function POST() {
     updatedAt: new Date().toISOString(),
   };
   const response = NextResponse.json({ demo: true });
-  setSession(response, { athleteId: athlete.id, athlete, accessToken: "", refreshToken: "", expiresAt: 0, scope: "", demo: true, entry });
+  setSession(response, { athleteId: athlete.id, athlete, accessToken: "", refreshToken: "", expiresAt: 0, scope: "", demo: true, anonymous: true, entry });
   return response;
 }

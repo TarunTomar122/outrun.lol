@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const entry = session?.entry && (!storedEntry || session.entry.updatedAt > storedEntry.updatedAt) ? session.entry : storedEntry ?? session?.entry ?? null;
   return NextResponse.json({
     configured: Boolean(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET),
-    connected: Boolean(session),
+    connected: Boolean(session && !session.anonymous),
     demo: Boolean(session?.demo),
     athlete: session?.athlete ?? null,
     entry,
