@@ -5,7 +5,7 @@ import { dayKey, trackEntry } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const input = await request.json().catch(() => null) as { entryId?: string; event?: "click" | "visit" } | null;
-  if (!input?.entryId || (input.event !== "click" && input.event !== "visit")) return NextResponse.json({ error: "Invalid tracking event." }, { status: 400 });
+  if (typeof input?.entryId !== "string" || (input.event !== "click" && input.event !== "visit")) return NextResponse.json({ error: "Invalid tracking event." }, { status: 400 });
   const session = readSession(request);
   const stored = await trackEntry(dayKey(), input.entryId, input.event);
   const sessionEntry = session?.entry?.id === input.entryId ? {
