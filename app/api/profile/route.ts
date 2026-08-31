@@ -14,7 +14,7 @@ function anonymousSession(): Session {
 export async function POST(request: NextRequest) {
   const session = readSession(request);
   const current = session ?? anonymousSession();
-  const input = await request.json().catch(() => null) as { proofLink?: string; link?: string; headline?: string; category?: string } | null;
+  const input = await request.json().catch(() => null) as { proofLink?: string; link?: string } | null;
   const proofLink = typeof input?.proofLink === "string" ? input.proofLink.trim() : "";
   try {
     new URL(proofLink);
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   try {
     verified = await verifyStravaActivity(proofLink, dayKey());
   } catch {
-    return NextResponse.json({ error: "We could not verify that activity. Use a public Run from today." }, { status: 422 });
+    return NextResponse.json({ error: "We could not verify that activity. Use a public Run from today that allows embedding." }, { status: 422 });
   }
   const previous = current.entry ?? await getEntry(dayKey(), `athlete-${current.athleteId}`);
   const entry = {
@@ -43,8 +43,8 @@ export async function POST(request: NextRequest) {
     avatar: current.athlete.profile,
     link,
     proofLink: verified.activityUrl,
-    headline: typeof input?.headline === "string" ? input.headline.trim().slice(0, 180) || previous?.headline || "Running a little further today." : previous?.headline || "Running a little further today.",
-    category: typeof input?.category === "string" ? input.category.trim().slice(0, 40) || previous?.category || "Running" : previous?.category || "Running",
+    headline: previous?.headline || "Running a little further today.",
+    category: previous?.category || "Running",
     distanceKm: verified.distanceKm,
     clicks: previous?.clicks ?? 0,
     visitors: previous?.visitors ?? 0,

@@ -36,7 +36,7 @@ export async function verifyStravaActivity(value: string, today: string): Promis
   const dateText = html.match(/class="activity-date">([^<]+)</i)?.[1]?.trim();
   const distanceMatch = html.match(/class="stat-label">Distance<\/div><div class="stat-value">\s*([\d.,]+)\s*(km|mi|m)\b/i);
   const name = html.match(/class="athlete-name"[^>]*>([^<]+)</i)?.[1]?.trim();
-  const date = dateText ? new Date(dateText).toISOString().slice(0, 10) : "";
+  const date = dateText ? new Date(`${dateText} UTC`).toISOString().slice(0, 10) : "";
   if (!type || !/run/i.test(type) || !date || date !== today || !distanceMatch) throw new Error("activity-not-eligible");
   return { activityUrl: `https://www.strava.com/activities/${id}`, athleteName: decodeHtml(name ?? "Runner"), distanceKm: distanceKm(distanceMatch[1], distanceMatch[2]), date };
 }
