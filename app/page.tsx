@@ -100,12 +100,17 @@ export default function Home() {
   async function sync() {
     setSyncing(true);
     setStatus("Syncing today’s runs…");
-    const response = await fetch("/api/strava/sync", { method: "POST" });
-    const result = await response.json();
-    setSyncing(false);
-    if (!response.ok) return setStatus(result.error ?? "Sync failed.");
-    setStatus(result.demo ? "Demo distance synced." : `Synced ${distance(result.distanceKm)} from Strava.`);
-    await load();
+    try {
+      const response = await fetch("/api/strava/sync", { method: "POST" });
+      const result = await response.json();
+      if (!response.ok) return setStatus(result.error ?? "Sync failed.");
+      setStatus(result.demo ? "Demo distance synced." : `Synced ${distance(result.distanceKm)} from Strava.`);
+      await load();
+    } catch {
+      setStatus("Sync failed. Try again in a moment.");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function save(event: FormEvent) {
