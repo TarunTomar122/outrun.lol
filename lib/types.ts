@@ -15,7 +15,6 @@ export type Session = {
   refreshToken: string;
   expiresAt: number;
   scope: string;
-  demo?: boolean;
   anonymous?: boolean;
   entry?: Entry;
 };

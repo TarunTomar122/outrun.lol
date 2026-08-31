@@ -62,7 +62,7 @@ const memory: Store = (globalThis.__outrunStore ??= { days: new Map() });
 
 const seedEntries: Omit<Entry, "updatedAt">[] = [
   { id: "seed-stocksbrew", athleteId: 1001, name: "StocksBrew", siteLogo: "https://stocksbrew.online/icon.svg", link: "https://stocksbrew.online", headline: "A calmer way to make sense of the market.", distanceKm: 24.8, clicks: 0 },
-  { id: "seed-yourtrace", athleteId: 1002, name: "YourTrace", siteLogo: "https://yourtrace.online/trace-app-icon-v1-192.png", link: "https://yourtrace.online", headline: "See what your website is really doing.", distanceKm: 18.6, clicks: 0 },
+  { id: "seed-yourtrace", athleteId: 1002, name: "YourTrace", link: "https://yourtrace.online", headline: "See what your website is really doing.", distanceKm: 18.6, clicks: 0 },
 ];
 
 export function dayKey(date = new Date()) {

@@ -8,8 +8,6 @@ import type { Session } from "@/lib/types";
 export async function POST(request: NextRequest) {
   const session = readSession(request);
   if (!session) return NextResponse.json({ error: "Connect Strava first." }, { status: 401 });
-  if (session.demo) return NextResponse.json({ distanceKm: 8.4, athlete: session.athlete, demo: true });
-
   try {
     let current: Session = session;
     if (session.expiresAt <= Math.floor(Date.now() / 1000) + 60) {

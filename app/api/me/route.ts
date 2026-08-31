@@ -10,7 +10,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     configured: Boolean(process.env.STRAVA_CLIENT_ID && process.env.STRAVA_CLIENT_SECRET),
     connected: Boolean(session && !session.anonymous),
-    demo: Boolean(session?.demo),
     athlete: session?.athlete ?? null,
     entry,
   });

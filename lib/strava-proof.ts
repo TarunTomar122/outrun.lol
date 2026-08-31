@@ -59,7 +59,7 @@ function exactDate(value: string) {
 async function htmlAt(url: string) {
   try {
     const response = await fetch(url, {
-      headers: { "user-agent": "outrun.lol activity verifier" },
+      headers: { "user-agent": "outrunn.lol activity verifier" },
       signal: AbortSignal.timeout(8000),
       cache: "no-store",
     });

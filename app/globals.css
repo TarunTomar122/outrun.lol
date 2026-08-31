@@ -10,11 +10,10 @@ button, a, input { outline-offset: 3px; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--accent); }
 .app-shell { max-width: 1100px; margin: 0 auto; padding: 0 16px 64px; }
 .topbar { min-height: 76px; display: flex; align-items: center; justify-content: space-between; }
-.logo { display: inline-flex; align-items: center; gap: 6px; font-size: 20px; font-weight: 500; letter-spacing: -.07em; white-space: nowrap; }
-.logo-glyph { width: 26px; height: 23px; position: relative; display: inline-flex; flex-direction: column; justify-content: end; gap: 4px; }
-.logo-glyph i { display: block; height: 4px; width: 24px; border-radius: 4px; background: var(--ink); }
-.logo-glyph i:first-child { width: 10px; align-self: end; background: var(--accent); }
-.logo-glyph i:nth-child(2) { width: 17px; align-self: end; }
+.logo { display: inline-flex; align-items: center; gap: 7px; font-size: 20px; font-weight: 500; letter-spacing: -.07em; white-space: nowrap; }
+.brand-mark { width: 31px; height: 25px; overflow: visible; }
+.brand-mark .brand-speed { stroke: var(--ink); stroke-width: 4; stroke-linecap: round; }
+.brand-mark .brand-runner { stroke: var(--accent); stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
 header nav { display: flex; gap: 28px; }
 header nav a { color: var(--muted); font-size: 14px; }
 header nav a:hover, header nav .active { color: var(--ink); }
@@ -59,7 +58,9 @@ h1 { margin: 28px 0 0; font-size: clamp(36px, 5vw, 48px); line-height: 1.1; lett
 .rank-card.card-2 { background: #fff5f0; }
 .rank-card.card-3 { background: #fffaf7; }
 .rank-badge { width: 38px; height: 29px; display: grid; place-items: center; border-radius: 16px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 500; }
-.site-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: cover; background: #fff; }
+.site-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: contain; padding: 5px; background: #fff; }
+.site-logo-art { display: grid; place-items: center; padding: 6px; border: 1px solid var(--line); color: var(--ink); }
+.site-logo-art svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
 .site-logo-fallback { display: grid; place-items: center; border: 1px solid var(--line); color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: -.03em; }
 .rank-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-right: 36px; }
 .rank-copy b, .rank-copy > span, .rank-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -72,8 +73,6 @@ h1 { margin: 28px 0 0; font-size: clamp(36px, 5vw, 48px); line-height: 1.1; lett
 footer { display: flex; align-items: center; justify-content: space-between; min-height: 82px; margin-top: 18px; color: var(--muted); font-size: 12px; }
 footer .logo { color: var(--ink); font-size: 16px; }
 footer .logo-glyph { transform: scale(.75); transform-origin: left center; width: 21px; }
-.demo-float { display: flex; align-items: center; justify-content: center; gap: 12px; color: var(--quiet); font-size: 11px; }
-.demo-float button { border: 0; background: transparent; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 @media (max-width: 760px) {
   .app-shell { padding-inline: 12px; }
@@ -99,5 +98,4 @@ footer .logo-glyph { transform: scale(.75); transform-origin: left center; width
   .rank-distance { font-size: 14px; }
   .proof-link { right: 12px; bottom: 10px; }
   footer { align-items: start; flex-direction: column; gap: 8px; padding: 20px 0; }
-  .demo-float { align-items: start; flex-direction: column; gap: 3px; }
 }

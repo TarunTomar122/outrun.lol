@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "outrun.lol — run further, move up",
-  description: "The daily running leaderboard. Connect Strava, log your miles, and outrun the internet.",
+  title: "outrunn.lol — run further, move up",
+  description: "The daily running leaderboard. Verify your Run, claim a rank, and outrun the internet.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

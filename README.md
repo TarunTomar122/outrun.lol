@@ -1,4 +1,4 @@
-# outrun.lol
+# outrunn.lol
 
 The daily running leaderboard. Link a public Strava activity, verify today’s running distance, and publish one link on the board.
 
@@ -20,7 +20,7 @@ The optional Strava OAuth connector needs an app at [strava.com/settings/api](ht
 http://localhost:3000/api/strava/callback
 ```
 
-For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunlol.vercel.app/api/strava/callback` (or your custom domain) only if enabling the optional connector. Attach an Upstash Redis database through Vercel Marketplace for durable leaderboard and click-count storage. Without Redis variables, the app falls back to process memory for local development.
+For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunn.lol/api/strava/callback` (or your Vercel URL) only if enabling the optional connector. Attach an Upstash Redis database through Vercel Marketplace for durable leaderboard and click-count storage. Without Redis variables, the app falls back to process memory for local development.
 
 ## Checks
 
