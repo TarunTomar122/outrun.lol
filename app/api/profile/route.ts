@@ -16,11 +16,7 @@ export async function POST(request: NextRequest) {
   const current = session ?? anonymousSession();
   const input = await request.json().catch(() => null) as { proofLink?: string; link?: string } | null;
   const proofLink = typeof input?.proofLink === "string" ? input.proofLink.trim() : "";
-  try {
-    new URL(proofLink);
-  } catch {
-    return NextResponse.json({ error: "Add a public Strava activity link." }, { status: 400 });
-  }
+  if (!proofLink || proofLink.length > 12000) return NextResponse.json({ error: "Add a Strava activity URL or embed snippet." }, { status: 400 });
   const link = typeof input?.link === "string" ? input.link.trim() : "";
   if (!link || link.length > 300) return NextResponse.json({ error: "Add a link under 300 characters." }, { status: 400 });
   try {
@@ -44,7 +40,6 @@ export async function POST(request: NextRequest) {
     link,
     proofLink: verified.activityUrl,
     headline: previous?.headline || "Running a little further today.",
-    category: previous?.category || "Running",
     distanceKm: verified.distanceKm,
     clicks: previous?.clicks ?? 0,
     visitors: previous?.visitors ?? 0,

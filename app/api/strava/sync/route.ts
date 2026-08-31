@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
       avatar: current.athlete.profile,
       link: previous?.link ?? "https://strava.com",
       headline: previous?.headline ?? "Running a little further today.",
-      category: previous?.category ?? "Running",
       distanceKm,
       clicks: previous?.clicks ?? 0,
       visitors: previous?.visitors ?? 0,

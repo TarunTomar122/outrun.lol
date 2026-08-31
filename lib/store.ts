@@ -11,11 +11,11 @@ const memory: Store = (globalThis.__outrunStore ??= { days: new Map(), visitors:
 memory.visitors ??= new Map();
 
 const seedEntries: Omit<Entry, "updatedAt">[] = [
-  { id: "seed-1", athleteId: 1001, name: "Maya Chen", link: "https://stride.club", headline: "A calmer way to build a running habit.", category: "Health", distanceKm: 24.8, clicks: 842, visitors: 516 },
-  { id: "seed-2", athleteId: 1002, name: "Oliver Reed", link: "https://paceboard.app", headline: "Your week, measured in good decisions.", category: "Productivity", distanceKm: 18.6, clicks: 611, visitors: 382 },
-  { id: "seed-3", athleteId: 1003, name: "Priya Shah", link: "https://slowmiles.co", headline: "The social running club for the long way home.", category: "Community", distanceKm: 16.1, clicks: 488, visitors: 297 },
-  { id: "seed-4", athleteId: 1004, name: "Jon Bell", link: "https://workoutlog.dev", headline: "A tiny workout logger for serious lifters.", category: "Tools", distanceKm: 12.4, clicks: 221, visitors: 161 },
-  { id: "seed-5", athleteId: 1005, name: "Sam Okafor", link: "https://fieldnotes.run", headline: "Training notes that stay out of your way.", category: "Writing", distanceKm: 9.8, clicks: 173, visitors: 109 },
+  { id: "seed-1", athleteId: 1001, name: "Maya Chen", link: "https://stride.club", headline: "A calmer way to build a running habit.", distanceKm: 24.8, clicks: 842, visitors: 516 },
+  { id: "seed-2", athleteId: 1002, name: "Oliver Reed", link: "https://paceboard.app", headline: "Your week, measured in good decisions.", distanceKm: 18.6, clicks: 611, visitors: 382 },
+  { id: "seed-3", athleteId: 1003, name: "Priya Shah", link: "https://slowmiles.co", headline: "The social running club for the long way home.", distanceKm: 16.1, clicks: 488, visitors: 297 },
+  { id: "seed-4", athleteId: 1004, name: "Jon Bell", link: "https://workoutlog.dev", headline: "A tiny workout logger for serious lifters.", distanceKm: 12.4, clicks: 221, visitors: 161 },
+  { id: "seed-5", athleteId: 1005, name: "Sam Okafor", link: "https://fieldnotes.run", headline: "Training notes that stay out of your way.", distanceKm: 9.8, clicks: 173, visitors: 109 },
 ];
 
 function hasKv() {

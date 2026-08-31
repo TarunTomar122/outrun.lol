@@ -11,7 +11,6 @@ export async function POST() {
     name: previous?.name ?? "Demo Runner",
     link: previous?.link ?? "https://outrun.lol",
     headline: previous?.headline ?? "A tiny running experiment on the internet.",
-    category: previous?.category ?? "Running",
     distanceKm: previous?.distanceKm ?? 8.4,
     clicks: previous?.clicks ?? 0,
     visitors: previous?.visitors ?? 0,

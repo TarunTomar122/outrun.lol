@@ -28,7 +28,6 @@ export type Entry = {
   link: string;
   proofLink?: string;
   headline: string;
-  category: string;
   distanceKm: number;
   clicks: number;
   visitors: number;
