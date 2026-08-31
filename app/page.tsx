@@ -22,12 +22,13 @@ function timeSince(date: string) {
   return minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
 }
 
-function todayLabel() {
-  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date());
+function dateLabel(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 }
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [boardDate, setBoardDate] = useState("");
   const [siteVisitors, setSiteVisitors] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +42,7 @@ export default function Home() {
       fetch("/api/me", { cache: "no-store" }).then((response) => response.json()),
     ]);
     setEntries(leaderboard.entries);
+    setBoardDate(leaderboard.date);
     setSiteVisitors(leaderboard.visitors ?? 0);
     setMe(profile);
     if (profile.entry) {
@@ -108,7 +110,7 @@ export default function Home() {
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
-      <div className="board-heading"><div><h2>{todayLabel()}</h2><p>Furthest verified Run wins the day.</p></div><span>Live · {entries.length} runners</span></div>
+      <div className="board-heading"><div><h2>{boardDate ? dateLabel(boardDate) : "Daily board"}</h2><p>Furthest verified Run wins the day.</p></div><span>Live · {entries.length} runners</span></div>
       <div className="ranking-list">
         {loading ? <div className="empty-state">Loading today’s runners…</div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} key={entry.id}>
           <span className="rank-badge">#{index + 1}</span>
