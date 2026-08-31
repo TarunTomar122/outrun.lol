@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { readSession, setSession } from "@/lib/session";
-import { dayKey, trackEntry } from "@/lib/store";
+import { dayKey, trackEntry, trackSiteVisit } from "@/lib/store";
 
 export async function POST(request: NextRequest) {
   const input = await request.json().catch(() => null) as { entryId?: string; event?: "click" | "visit" } | null;
   if (typeof input?.entryId !== "string" || (input.event !== "click" && input.event !== "visit")) return NextResponse.json({ error: "Invalid tracking event." }, { status: 400 });
+  if (input.entryId === "site" && input.event === "visit") return NextResponse.json({ ok: true, visitors: await trackSiteVisit() });
   const session = readSession(request);
   const stored = await trackEntry(dayKey(), input.entryId, input.event);
   const sessionEntry = session?.entry?.id === input.entryId ? {

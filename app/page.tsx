@@ -28,6 +28,7 @@ function todayLabel() {
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [siteVisitors, setSiteVisitors] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
@@ -40,6 +41,7 @@ export default function Home() {
       fetch("/api/me", { cache: "no-store" }).then((response) => response.json()),
     ]);
     setEntries(leaderboard.entries);
+    setSiteVisitors(leaderboard.visitors ?? 0);
     setMe(profile);
     if (profile.entry) {
       setProofLink(profile.entry.proofLink ?? "");
@@ -52,11 +54,11 @@ export default function Home() {
     void load();
     if (!window.localStorage.getItem("outrun-visit")) {
       window.localStorage.setItem("outrun-visit", "1");
-      void fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entryId: "seed-1", event: "visit" }) });
+      void fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entryId: "site", event: "visit" }) })
+        .then((response) => response.json())
+        .then((result) => { if (typeof result.visitors === "number") setSiteVisitors(result.visitors); });
     }
   }, [load]);
-
-  const visitorCount = entries.reduce((total, entry) => total + entry.visitors, 0);
 
   async function demo() {
     setStatus("Opening demo mode…");
@@ -91,7 +93,7 @@ export default function Home() {
     </header>
 
     <section id="top" className="intro">
-      <div className="live-pill"><span>● {entries.length} runners</span> · {visitorCount.toLocaleString()} visitors</div>
+      <div className="live-pill"><span>● {entries.length} runners</span> · {siteVisitors.toLocaleString()} visitors</div>
       <h1>Daily</h1>
       <p className="intro-copy">Who ran the furthest today? Link your public Strava Run, get verified, and put one link in front of the board.</p>
     </section>

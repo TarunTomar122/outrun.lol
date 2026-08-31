@@ -1,13 +1,14 @@
 import type { Entry } from "./types";
 
-type Store = { days: Map<string, Entry[]> };
+type Store = { days: Map<string, Entry[]>; visitors: Map<string, number> };
 
 declare global {
   // eslint-disable-next-line no-var
   var __outrunStore: Store | undefined;
 }
 
-const memory: Store = (globalThis.__outrunStore ??= { days: new Map() });
+const memory: Store = (globalThis.__outrunStore ??= { days: new Map(), visitors: new Map() });
+memory.visitors ??= new Map();
 
 const seedEntries: Omit<Entry, "updatedAt">[] = [
   { id: "seed-1", athleteId: 1001, name: "Maya Chen", link: "https://stride.club", headline: "A calmer way to build a running habit.", category: "Health", distanceKm: 24.8, clicks: 842, visitors: 516 },
@@ -84,6 +85,24 @@ export async function updateEntry(date: string, id: string, update: (entry: Entr
 
 export async function getEntry(date: string, id: string) {
   return (await getEntries(date)).find((entry) => entry.id === id) ?? null;
+}
+
+export async function getSiteVisitors(date = dayKey()) {
+  const stored = await kv(["GET", `outrun:visitors:${date}`]);
+  const count = Number(stored);
+  if (stored !== null && stored !== undefined && Number.isFinite(count)) {
+    memory.visitors.set(date, count);
+    return count;
+  }
+  return memory.visitors.get(date) ?? 0;
+}
+
+export async function trackSiteVisit(date = dayKey()) {
+  const count = (await getSiteVisitors(date)) + 1;
+  memory.visitors.set(date, count);
+  // ponytail: increments can collide without Redis atomic ops; use INCR when traffic matters.
+  if (hasKv()) await kv(["SET", `outrun:visitors:${date}`, String(count)]);
+  return count;
 }
 
 export async function trackEntry(date: string, id: string, event: "click" | "visit") {
