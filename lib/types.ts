@@ -25,11 +25,11 @@ export type Entry = {
   athleteId: number;
   name: string;
   avatar?: string;
+  siteLogo?: string;
   link: string;
   proofLink?: string;
   headline: string;
   distanceKm: number;
   clicks: number;
-  visitors: number;
   updatedAt: string;
 };

@@ -53,12 +53,14 @@ h1 { margin: 28px 0 0; font-size: clamp(36px, 5vw, 48px); line-height: 1.1; lett
 .board-heading p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 .board-heading > span { color: var(--accent); font-size: 13px; }
 .ranking-list { display: grid; gap: 10px; }
-.rank-card { position: relative; min-height: 84px; display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; background: #fff; transition: transform .18s ease, border-color .18s ease; }
+.rank-card { position: relative; min-height: 84px; display: grid; grid-template-columns: 44px 42px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; background: #fff; transition: transform .18s ease, border-color .18s ease; }
 .rank-card:hover { transform: translateY(-2px); border-color: var(--accent); }
 .rank-card.card-1 { border: 2px solid var(--accent); background: var(--peach); }
 .rank-card.card-2 { background: #fff5f0; }
 .rank-card.card-3 { background: #fffaf7; }
 .rank-badge { width: 38px; height: 29px; display: grid; place-items: center; border-radius: 16px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 500; }
+.site-logo { width: 42px; height: 42px; border-radius: 12px; object-fit: cover; background: #fff; }
+.site-logo-fallback { display: grid; place-items: center; border: 1px solid var(--line); color: var(--accent); font-size: 11px; font-weight: 600; letter-spacing: -.03em; }
 .rank-copy { min-width: 0; display: flex; flex-direction: column; gap: 4px; padding-right: 36px; }
 .rank-copy b, .rank-copy > span, .rank-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-copy b { font-size: 15px; font-weight: 600; }
@@ -88,7 +90,8 @@ footer .logo-glyph { transform: scale(.75); transform-origin: left center; width
   .claim-subline span:last-child { text-align: left; }
   .board { margin-top: 30px; }
   .board-heading { align-items: start; flex-direction: column; gap: 8px; padding-inline: 8px; }
-  .rank-card { grid-template-columns: 39px minmax(0, 1fr) auto; gap: 10px; min-height: 106px; padding: 12px; }
+  .rank-card { grid-template-columns: 39px 36px minmax(0, 1fr) auto; gap: 10px; min-height: 106px; padding: 12px; }
+  .site-logo { width: 36px; height: 36px; border-radius: 10px; }
   .rank-copy { padding-right: 31px; }
   .rank-copy b { font-size: 13px; }
   .rank-copy > span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }

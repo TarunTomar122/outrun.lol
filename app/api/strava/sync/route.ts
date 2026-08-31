@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
       headline: previous?.headline ?? "Running a little further today.",
       distanceKm,
       clicks: previous?.clicks ?? 0,
-      visitors: previous?.visitors ?? 0,
       updatedAt: new Date().toISOString(),
     };
     await upsertEntry(dayKey(), entry);

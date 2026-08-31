@@ -46,14 +46,14 @@ export async function getAthlete(accessToken: string) {
   return parse<Athlete>(await fetch(`${API_BASE}/athlete`, { headers: { authorization: `Bearer ${accessToken}` }, cache: "no-store" }));
 }
 
-function localDate(timeZone = "UTC") {
+function localDate(timeZone = "Asia/Kolkata") {
   const parts = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }
 
 export async function getTodayDistance(session: Session) {
-  const date = localDate(session.athlete.timezone);
+  const date = localDate();
   const after = Math.floor(Date.now() / 1000) - 60 * 60 * 48;
   const params = new URLSearchParams({ after: String(after), per_page: "200" });
   const activities = await parse<Activity[]>(await fetch(`${API_BASE}/athlete/activities?${params}`, { headers: { authorization: `Bearer ${session.accessToken}` }, cache: "no-store" }));

@@ -1,36 +1,28 @@
 import type { Entry } from "./types";
 
-type Store = { days: Map<string, Entry[]>; visitors: Map<string, number> };
+type Store = { days: Map<string, Entry[]> };
 
 declare global {
   // eslint-disable-next-line no-var
   var __outrunStore: Store | undefined;
 }
 
-const memory: Store = (globalThis.__outrunStore ??= { days: new Map(), visitors: new Map() });
-memory.visitors ??= new Map();
+const REDIS_URL = process.env.outrun_KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const REDIS_TOKEN = process.env.outrun_KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
-const seedEntries: Omit<Entry, "updatedAt">[] = [
-  { id: "seed-1", athleteId: 1001, name: "Maya Chen", link: "https://stride.club", headline: "A calmer way to build a running habit.", distanceKm: 24.8, clicks: 842, visitors: 516 },
-  { id: "seed-2", athleteId: 1002, name: "Oliver Reed", link: "https://paceboard.app", headline: "Your week, measured in good decisions.", distanceKm: 18.6, clicks: 611, visitors: 382 },
-  { id: "seed-3", athleteId: 1003, name: "Priya Shah", link: "https://slowmiles.co", headline: "The social running club for the long way home.", distanceKm: 16.1, clicks: 488, visitors: 297 },
-  { id: "seed-4", athleteId: 1004, name: "Jon Bell", link: "https://workoutlog.dev", headline: "A tiny workout logger for serious lifters.", distanceKm: 12.4, clicks: 221, visitors: 161 },
-  { id: "seed-5", athleteId: 1005, name: "Sam Okafor", link: "https://fieldnotes.run", headline: "Training notes that stay out of your way.", distanceKm: 9.8, clicks: 173, visitors: 109 },
-];
-
-function hasKv() {
-  return Boolean(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+function hasRedis() {
+  return Boolean(REDIS_URL && REDIS_TOKEN);
 }
 
-async function kv(command: unknown[]) {
-  if (!hasKv()) return null;
-  const response = await fetch(process.env.KV_REST_API_URL!, {
+async function redis(command: Array<string | number>) {
+  if (!hasRedis()) return null;
+  const response = await fetch(REDIS_URL!, {
     method: "POST",
-    headers: { authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`, "content-type": "application/json" },
+    headers: { authorization: `Bearer ${REDIS_TOKEN}`, "content-type": "application/json" },
     body: JSON.stringify(command),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error(`KV request failed: ${response.status}`);
+  if (!response.ok) throw new Error(`Redis request failed: ${response.status}`);
   return (await response.json() as { result?: unknown }).result;
 }
 
@@ -44,8 +36,39 @@ function parseEntries(value: unknown) {
   }
 }
 
+function entryKey(date: string) {
+  return `outrun:entries:${date}`;
+}
+
+function clickKey(date: string, id: string) {
+  return `outrun:clicks:${date}:${id}`;
+}
+
+async function withClickCounts(date: string, entries: Entry[]) {
+  if (!hasRedis()) return entries;
+  return Promise.all(entries.map(async (entry) => {
+    let stored = await redis(["GET", clickKey(date, entry.id)]);
+    if (stored === null || stored === undefined) {
+      await redis(["SET", clickKey(date, entry.id), String(entry.clicks), "NX"]);
+      stored = await redis(["GET", clickKey(date, entry.id)]);
+    }
+    const clicks = Number(stored);
+    return { ...entry, clicks: Number.isFinite(clicks) ? clicks : entry.clicks };
+  }));
+}
+
+// ponytail: memory is the zero-config fallback; Redis handles shared durable counts when attached.
+const memory: Store = (globalThis.__outrunStore ??= { days: new Map() });
+
+const seedEntries: Omit<Entry, "updatedAt">[] = [
+  { id: "seed-stocksbrew", athleteId: 1001, name: "StocksBrew", siteLogo: "https://stocksbrew.online/icon.svg", link: "https://stocksbrew.online", headline: "A calmer way to make sense of the market.", distanceKm: 24.8, clicks: 0 },
+  { id: "seed-yourtrace", athleteId: 1002, name: "YourTrace", siteLogo: "https://yourtrace.online/trace-app-icon-v1-192.png", link: "https://yourtrace.online", headline: "See what your website is really doing.", distanceKm: 18.6, clicks: 0 },
+];
+
 export function dayKey(date = new Date()) {
-  return date.toISOString().slice(0, 10);
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function freshSeeds() {
@@ -53,16 +76,23 @@ function freshSeeds() {
 }
 
 export async function getEntries(date = dayKey()) {
-  const stored = parseEntries(await kv(["GET", `outrun:entries:${date}`]));
-  if (stored) return stored;
-  if (!memory.days.has(date)) memory.days.set(date, freshSeeds());
-  return memory.days.get(date)!;
+  const stored = parseEntries(await redis(["GET", entryKey(date)]));
+  if (stored) {
+    const entries = await withClickCounts(date, stored);
+    memory.days.set(date, entries);
+    return entries;
+  }
+  if (!memory.days.has(date)) {
+    const entries = freshSeeds();
+    memory.days.set(date, entries);
+    if (hasRedis()) await redis(["SET", entryKey(date), JSON.stringify(entries), "NX"]);
+  }
+  return withClickCounts(date, memory.days.get(date)!);
 }
 
 async function saveEntries(date: string, entries: Entry[]) {
   memory.days.set(date, entries);
-  // ponytail: read/write updates can lose concurrent increments; use Redis atomic ops if traffic matters.
-  if (hasKv()) await kv(["SET", `outrun:entries:${date}`, JSON.stringify(entries)]);
+  if (hasRedis()) await redis(["SET", entryKey(date), JSON.stringify(entries)]);
 }
 
 export async function upsertEntry(date: string, entry: Entry) {
@@ -71,6 +101,7 @@ export async function upsertEntry(date: string, entry: Entry) {
   if (index === -1) entries.push(entry);
   else entries[index] = { ...entries[index], ...entry };
   await saveEntries(date, entries);
+  if (hasRedis()) await redis(["SET", clickKey(date, entry.id), String(entry.clicks), "NX"]);
   return entry;
 }
 
@@ -87,28 +118,19 @@ export async function getEntry(date: string, id: string) {
   return (await getEntries(date)).find((entry) => entry.id === id) ?? null;
 }
 
-export async function getSiteVisitors(date = dayKey()) {
-  const stored = await kv(["GET", `outrun:visitors:${date}`]);
-  const count = Number(stored);
-  if (stored !== null && stored !== undefined && Number.isFinite(count)) {
-    memory.visitors.set(date, count);
-    return count;
+export async function trackEntry(date: string, id: string) {
+  if (hasRedis()) {
+    const entry = await getEntry(date, id);
+    if (!entry) return null;
+    const value = Number(await redis(["INCR", clickKey(date, id)]));
+    const tracked = { ...entry, clicks: Number.isFinite(value) ? value : entry.clicks + 1 };
+    const entries = memory.days.get(date);
+    const index = entries?.findIndex((item) => item.id === id) ?? -1;
+    if (entries && index !== -1) entries[index] = tracked;
+    return tracked;
   }
-  return memory.visitors.get(date) ?? 0;
-}
-
-export async function trackSiteVisit(date = dayKey()) {
-  const count = (await getSiteVisitors(date)) + 1;
-  memory.visitors.set(date, count);
-  // ponytail: increments can collide without Redis atomic ops; use INCR when traffic matters.
-  if (hasKv()) await kv(["SET", `outrun:visitors:${date}`, String(count)]);
-  return count;
-}
-
-export async function trackEntry(date: string, id: string, event: "click" | "visit") {
   return updateEntry(date, id, (entry) => ({
     ...entry,
-    clicks: entry.clicks + (event === "click" ? 1 : 0),
-    visitors: entry.visitors + (event === "visit" ? 1 : 0),
+    clicks: entry.clicks + 1,
   }));
 }

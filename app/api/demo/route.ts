@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setSession } from "@/lib/session";
-import { dayKey, getEntry, upsertEntry } from "@/lib/store";
+import { dayKey, getEntry } from "@/lib/store";
 
 export async function POST() {
   const athlete = { id: 9001, firstname: "Demo", lastname: "Runner", timezone: "UTC" };
@@ -13,7 +13,6 @@ export async function POST() {
     headline: previous?.headline ?? "A tiny running experiment on the internet.",
     distanceKm: previous?.distanceKm ?? 8.4,
     clicks: previous?.clicks ?? 0,
-    visitors: previous?.visitors ?? 0,
     updatedAt: new Date().toISOString(),
   };
   const response = NextResponse.json({ demo: true });

@@ -20,7 +20,7 @@ The optional Strava OAuth connector needs an app at [strava.com/settings/api](ht
 http://localhost:3000/api/strava/callback
 ```
 
-For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunlol.vercel.app/api/strava/callback` (or your custom domain) only if enabling the optional connector. `KV_REST_API_URL` and `KV_REST_API_TOKEN` are optional; without them, the app uses a process-local store suitable for the demo and local development. Add Vercel KV/Upstash REST persistence before inviting multiple people.
+For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunlol.vercel.app/api/strava/callback` (or your custom domain) only if enabling the optional connector. Attach an Upstash Redis database through Vercel Marketplace for durable leaderboard and click-count storage. Without Redis variables, the app falls back to process memory for local development.
 
 ## Checks
 

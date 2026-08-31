@@ -18,6 +18,16 @@ function host(link: string) {
   }
 }
 
+function logoFallback(link: string) {
+  return host(link).split(".")[0].slice(0, 2).toUpperCase();
+}
+
+function SiteLogo({ entry }: { entry: Entry }) {
+  const [failed, setFailed] = useState(false);
+  if (entry.siteLogo && !failed) return <img className="site-logo" src={entry.siteLogo} alt="" width="42" height="42" onError={() => setFailed(true)} />;
+  return <span className="site-logo site-logo-fallback" aria-hidden="true">{logoFallback(entry.link)}</span>;
+}
+
 function timeSince(date: string) {
   const minutes = Math.max(1, Math.round((Date.now() - new Date(date).getTime()) / 60000));
   return minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
@@ -45,7 +55,6 @@ function failureFeedback(result: { code?: string; error?: string; activityDate?:
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [boardDate, setBoardDate] = useState("");
-  const [siteVisitors, setSiteVisitors] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -60,7 +69,6 @@ export default function Home() {
     ]);
     setEntries(leaderboard.entries);
     setBoardDate(leaderboard.date);
-    setSiteVisitors(leaderboard.visitors ?? 0);
     setMe(profile);
     if (profile.entry) {
       setProofLink(profile.entry.proofLink ?? "");
@@ -71,12 +79,6 @@ export default function Home() {
 
   useEffect(() => {
     void load();
-    if (!window.localStorage.getItem("outrun-visit")) {
-      window.localStorage.setItem("outrun-visit", "1");
-      void fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entryId: "site", event: "visit" }) })
-        .then((response) => response.json())
-        .then((result) => { if (typeof result.visitors === "number") setSiteVisitors(result.visitors); });
-    }
   }, [load]);
 
   async function demo() {
@@ -119,7 +121,7 @@ export default function Home() {
     </header>
 
     <section id="top" className="intro">
-      <div className="live-pill"><span>● {entries.length} runners</span> · {siteVisitors.toLocaleString()} visitors</div>
+      <div className="live-pill"><span>● {entries.length} runners</span> · click tracking on</div>
       <h1>Daily</h1>
       <p className="intro-copy">Who ran the furthest today? Link your public Strava Run, get verified, and put one link in front of the board.</p>
     </section>
@@ -139,6 +141,7 @@ export default function Home() {
       <div className="ranking-list">
         {loading ? <div className="empty-state">Loading today’s runners…</div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} key={entry.id}>
           <span className="rank-badge">#{index + 1}</span>
+          <SiteLogo entry={entry} />
           <a className="rank-copy" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer">
             <b>{entry.name} · {host(entry.link)}</b>
             <span>{entry.headline}</span>
