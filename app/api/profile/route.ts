@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { readSession, setSession } from "@/lib/session";
 import { dayKey, getEntry, upsertEntry } from "@/lib/store";
 import type { Session } from "@/lib/types";
-import { verifyStravaActivity } from "@/lib/strava-proof";
+import { ProofVerificationError, verifyStravaActivity } from "@/lib/strava-proof";
 
 function anonymousSession(): Session {
   const athleteId = randomInt(1_000_000_000, 2_000_000_000);
@@ -14,6 +14,7 @@ function anonymousSession(): Session {
 export async function POST(request: NextRequest) {
   const session = readSession(request);
   const current = session ?? anonymousSession();
+  const expectedDate = dayKey();
   const input = await request.json().catch(() => null) as { proofLink?: string; link?: string } | null;
   const proofLink = typeof input?.proofLink === "string" ? input.proofLink.trim() : "";
   if (!proofLink || proofLink.length > 12000) return NextResponse.json({ error: "Add a Strava activity URL or embed snippet." }, { status: 400 });
@@ -27,11 +28,22 @@ export async function POST(request: NextRequest) {
   }
   let verified;
   try {
-    verified = await verifyStravaActivity(proofLink, dayKey());
-  } catch {
+    verified = await verifyStravaActivity(proofLink, expectedDate);
+  } catch (error) {
+    if (error instanceof ProofVerificationError) {
+      const messages = {
+        invalid: "That doesn’t look like a Strava activity or embed snippet.",
+        unavailable: "We couldn’t open that activity. Make sure it’s public and embeddable.",
+        "not-run": "That activity isn’t a Run. Link a Run activity to join today’s board.",
+        "no-distance": "We couldn’t read a distance from that Run.",
+        "date-unavailable": "We couldn’t confirm when that activity happened.",
+        "wrong-day": "That Run is from another day.",
+      } as const;
+      return NextResponse.json({ error: messages[error.code], code: error.code, activityDate: error.activityDate, expectedDate }, { status: 422 });
+    }
     return NextResponse.json({ error: "We could not verify that activity. Use a public Run from today that allows embedding." }, { status: 422 });
   }
-  const previous = current.entry ?? await getEntry(dayKey(), `athlete-${current.athleteId}`);
+  const previous = current.entry ?? await getEntry(expectedDate, `athlete-${current.athleteId}`);
   const entry = {
     id: previous?.id ?? `runner-${current.athleteId}`,
     athleteId: current.athleteId,
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
     visitors: previous?.visitors ?? 0,
     updatedAt: new Date().toISOString(),
   };
-  await upsertEntry(dayKey(), entry);
+  await upsertEntry(expectedDate, entry);
   const response = NextResponse.json({ entry });
   setSession(response, { ...current, anonymous: current.anonymous ?? false, entry });
   return response;

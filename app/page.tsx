@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { Entry } from "@/lib/types";
 
 type Me = { entry: Entry | null };
+type Feedback = { tone: "info" | "success" | "error"; title: string; detail: string };
 
 function distance(value: number) {
   return `${value.toFixed(1)} km`;
@@ -26,13 +27,29 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 }
 
+function failureFeedback(result: { code?: string; error?: string; activityDate?: string; expectedDate?: string }): Feedback {
+  if (result.code === "wrong-day" && result.activityDate) {
+    const yesterday = result.expectedDate && Date.parse(`${result.expectedDate}T00:00:00Z`) - Date.parse(`${result.activityDate}T00:00:00Z`) === 86_400_000;
+    return { tone: "error", title: yesterday ? "That Run was yesterday." : `That Run was on ${dateLabel(result.activityDate)}.`, detail: `Submit a Run from ${result.expectedDate ? dateLabel(result.expectedDate) : "today"} to join this board.` };
+  }
+  const messages: Record<string, Feedback> = {
+    invalid: { tone: "error", title: "That proof link needs a check.", detail: "Paste a full Strava activity URL or the complete embed snippet." },
+    unavailable: { tone: "error", title: "We couldn’t open that activity.", detail: "Make sure the activity is public and embeddable, then try again." },
+    "not-run": { tone: "error", title: "That activity isn’t a Run.", detail: "Link a Strava Run to join today’s board." },
+    "no-distance": { tone: "error", title: "Distance wasn’t available.", detail: "Use a Run with a visible distance in its Strava embed." },
+    "date-unavailable": { tone: "error", title: "We couldn’t confirm the date.", detail: "Try the full activity URL or a fresh embed snippet." },
+  };
+  return messages[result.code ?? ""] ?? { tone: "error", title: "We couldn’t verify that activity.", detail: result.error ?? "Try a public Run from today." };
+}
+
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [boardDate, setBoardDate] = useState("");
   const [siteVisitors, setSiteVisitors] = useState(0);
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
-  const [status, setStatus] = useState("");
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [proofLink, setProofLink] = useState("");
   const [link, setLink] = useState("");
 
@@ -63,27 +80,34 @@ export default function Home() {
   }, [load]);
 
   async function demo() {
-    setStatus("Opening demo mode…");
+    setFeedback({ tone: "info", title: "Loading the demo…", detail: "This adds a sample result so you can see the board." });
     await fetch("/api/demo", { method: "POST" });
     await load();
-    setStatus("Demo result loaded. Replace it with your public Run.");
+    setFeedback({ tone: "info", title: "Demo result loaded.", detail: "Replace it with a public Run from today to publish your real result." });
   }
 
   async function save(event: FormEvent) {
     event.preventDefault();
-    setStatus("Verifying your activity…");
+    if (submitting) return;
+    setSubmitting(true);
+    setFeedback({ tone: "info", title: "Checking your Run…", detail: "We’re reading the activity, date, and distance from Strava." });
     try {
       const response = await fetch("/api/profile", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ proofLink, link }),
       });
-      const result = await response.json();
-      if (!response.ok) return setStatus(result.error ?? "Could not publish your spot.");
-      setStatus("Your spot is live.");
+      const result = await response.json() as { entry?: Entry; error?: string; code?: string; activityDate?: string; expectedDate?: string };
+      if (!response.ok) {
+        setFeedback(failureFeedback(result));
+        return;
+      }
       await load();
+      setFeedback({ tone: "success", title: "You’re on today’s board.", detail: `${result.entry?.name ?? "Your result"} · ${result.entry ? distance(result.entry.distanceKm) : "Distance verified"}. Your link is live.` });
     } catch {
-      setStatus("Could not verify that activity. Try again in a moment.");
+      setFeedback({ tone: "error", title: "The check timed out.", detail: "Strava took too long to respond. Try again in a moment." });
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -104,9 +128,10 @@ export default function Home() {
       <form className="claim-form" onSubmit={save}>
         <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Strava activity URL or embed snippet" type="text" required aria-label="Strava activity URL or embed snippet" /></label>
         <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
-        <button className="claim-button" type="submit">{me?.entry ? "Update result" : "Publish result"}</button>
+        <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Publish result"}</button>
       </form>
-      <div className="claim-subline"><span>Public Runs only · no account required</span><span>{status || "Distance is verified from the public activity."}</span></div>
+      {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : "…"}</span><div><strong>{feedback.title}</strong><p>{feedback.detail}</p></div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
+      <div className="claim-subline"><span>Public Runs only · no account required</span><span>Distance is verified from the public activity.</span></div>
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">

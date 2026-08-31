@@ -7,14 +7,37 @@ type VerifiedActivity = {
 
 type ActivityProof = { id: string; token?: string };
 
+export type ProofFailureCode = "invalid" | "unavailable" | "not-run" | "no-distance" | "date-unavailable" | "wrong-day";
+
+export class ProofVerificationError extends Error {
+  readonly code: ProofFailureCode;
+  readonly activityDate?: string;
+
+  constructor(code: ProofFailureCode, activityDate?: string) {
+    super(code);
+    this.name = "ProofVerificationError";
+    this.code = code;
+    this.activityDate = activityDate;
+  }
+}
+
+function fail(code: ProofFailureCode, activityDate?: string): never {
+  throw new ProofVerificationError(code, activityDate);
+}
+
 function proofDetails(value: string): ActivityProof {
   const embedId = value.match(/data-embed-id=["'](\d{4,20})["']/i);
   if (embedId) return { id: embedId[1], token: value.match(/data-token=["']([^"']+)["']/i)?.[1] };
 
-  const url = new URL(value);
-  if (url.protocol !== "https:" || !["strava.com", "www.strava.com", "strava-embeds.com"].includes(url.hostname)) throw new Error("invalid-url");
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return fail("invalid");
+  }
+  if (url.protocol !== "https:" || !["strava.com", "www.strava.com", "strava-embeds.com"].includes(url.hostname)) return fail("invalid");
   const match = url.pathname.match(url.hostname === "strava-embeds.com" ? /\/activity\/(\d{4,20})(?:\/|$)/ : /\/activities\/(\d{4,20})(?:\/|$)/);
-  if (!match) throw new Error("invalid-activity");
+  if (!match) return fail("invalid");
   return { id: match[1], token: url.searchParams.get("token") ?? undefined };
 }
 
@@ -34,13 +57,17 @@ function exactDate(value: string) {
 }
 
 async function htmlAt(url: string) {
-  const response = await fetch(url, {
-    headers: { "user-agent": "outrun.lol activity verifier" },
-    signal: AbortSignal.timeout(8000),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("activity-unavailable");
-  return response.text();
+  try {
+    const response = await fetch(url, {
+      headers: { "user-agent": "outrun.lol activity verifier" },
+      signal: AbortSignal.timeout(8000),
+      cache: "no-store",
+    });
+    if (!response.ok) return fail("unavailable");
+    return response.text();
+  } catch {
+    return fail("unavailable");
+  }
 }
 
 export async function verifyStravaActivity(value: string, today: string): Promise<VerifiedActivity> {
@@ -51,15 +78,23 @@ export async function verifyStravaActivity(value: string, today: string): Promis
   const dateText = html.match(/class="activity-date">([^<]+)</i)?.[1]?.trim() ?? "";
   const distanceMatch = html.match(/class="stat-label">Distance<\/div>\s*<div class="stat-value">\s*([\d.,]+)\s*(km|mi|m)\b/i);
   const name = html.match(/class="athlete-name"[^>]*>([^<]+)</i)?.[1]?.trim();
-  if (!type || !/run/i.test(type) || !distanceMatch) throw new Error("activity-not-eligible");
+  if (!type) return fail("unavailable");
+  if (!/run/i.test(type)) return fail("not-run");
+  if (!distanceMatch) return fail("no-distance");
 
   let date = exactDate(dateText);
   if (!date) {
-    const activityHtml = await htmlAt(`https://www.strava.com/activities/${id}`);
+    let activityHtml: string;
+    try {
+      activityHtml = await htmlAt(`https://www.strava.com/activities/${id}`);
+    } catch {
+      return fail("date-unavailable");
+    }
     const exactText = activityHtml.match(/name="description" content="View [^\"]+ on ([A-Z][a-z]+ \d{1,2}, \d{4}) \| Strava"/i)?.[1];
     date = exactText ? exactDate(exactText) : "";
   }
-  if (date !== today) throw new Error("activity-not-eligible");
+  if (!date) return fail("date-unavailable");
+  if (date !== today) return fail("wrong-day", date);
 
   return {
     activityUrl: `https://www.strava.com/activities/${id}`,
