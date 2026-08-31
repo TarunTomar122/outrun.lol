@@ -140,7 +140,7 @@ export default function Home() {
       <form onSubmit={save}>
         <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
         <label className="category-field"><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)} aria-label="Category">{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select><span aria-hidden="true">⌄</span></label>
-        <button className="claim-button" type="submit">{me?.connected ? "Publish spot" : "Claim rank"}</button>
+        {me?.connected ? <button className="claim-button" type="submit">Publish spot</button> : <a className="claim-button" href="/api/strava/connect">Connect Strava</a>}
       </form>
       <div className="claim-subline"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>{status || "Clicks and visitors are counted on every link."}</span></div>
     </section>
