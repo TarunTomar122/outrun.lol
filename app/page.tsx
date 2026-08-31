@@ -11,7 +11,7 @@ type Me = {
   entry: Entry | null;
 };
 
-const categories = ["All", "Running", "Health", "Productivity", "Community", "Tools", "Writing"];
+const categories = ["All", "Road", "Trail", "Workout", "Treadmill", "Health", "Community", "Other"];
 
 function distance(value: number) {
   return `${value.toFixed(1)} km`;
@@ -21,21 +21,34 @@ function initials(name: string) {
   return name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
+function host(link: string) {
+  try { return new URL(link).hostname.replace("www.", ""); } catch { return link; }
+}
+
 function timeSince(date: string) {
   const minutes = Math.max(1, Math.round((Date.now() - new Date(date).getTime()) / 60000));
   return minutes < 60 ? `${minutes}m ago` : `${Math.round(minutes / 60)}h ago`;
+}
+
+function PeriodToggle({ period, onChange, className = "" }: { period: "today" | "all"; onChange: (value: "today" | "all") => void; className?: string }) {
+  return <div className={`period-toggle ${className}`} role="tablist" aria-label="Leaderboard period">
+    <button className={period === "all" ? "selected" : ""} onClick={() => onChange("all")} role="tab" aria-selected={period === "all"}>♜ All-time</button>
+    <button className={period === "today" ? "selected today" : "today"} onClick={() => onChange("today")} role="tab" aria-selected={period === "today"}>● Today</button>
+  </div>;
 }
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [me, setMe] = useState<Me | null>(null);
   const [category, setCategory] = useState("All");
+  const [period, setPeriod] = useState<"today" | "all">("today");
+  const [targetDistance, setTargetDistance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [status, setStatus] = useState("");
   const [link, setLink] = useState("");
   const [headline, setHeadline] = useState("");
-  const [profileCategory, setProfileCategory] = useState("Running");
+  const [profileCategory, setProfileCategory] = useState("Road");
 
   const load = useCallback(async () => {
     const [leaderboard, profile] = await Promise.all([
@@ -59,8 +72,7 @@ export default function Home() {
     if (params.get("connected")) setStatus("Strava connected. Sync to update today’s distance.");
     if (error) setStatus(error === "strava-config" ? "Add Strava app keys in Vercel before connecting." : "Strava connection was not completed. Try again.");
     if (error || params.get("connected")) window.history.replaceState({}, "", window.location.pathname);
-    const seen = window.localStorage.getItem("outrun-visit");
-    if (!seen) {
+    if (!window.localStorage.getItem("outrun-visit")) {
       window.localStorage.setItem("outrun-visit", "1");
       void fetch("/api/track", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ entryId: "seed-1", event: "visit" }) });
     }
@@ -68,7 +80,15 @@ export default function Home() {
 
   const visibleEntries = useMemo(() => category === "All" ? entries : entries.filter((entry) => entry.category === category), [category, entries]);
   const top = entries.slice(0, 3);
-  const heroDistance = me?.entry?.distanceKm ?? top[0]?.distanceKm ?? 0;
+  const topDistance = top[0]?.distanceKm ?? 0;
+  const beatDistance = targetDistance ?? Number((topDistance + 0.1).toFixed(1));
+  const visitorCount = entries.reduce((total, entry) => total + entry.visitors, 0);
+  const runnerCount = entries.length;
+
+  function changePeriod(value: "today" | "all") {
+    setPeriod(value);
+    if (value === "all") setStatus("All-time history starts when the first week is complete.");
+  }
 
   async function demo() {
     setStatus("Opening demo mode…");
@@ -99,62 +119,49 @@ export default function Home() {
     await load();
   }
 
-  return (
-    <main>
-      <header className="site-header shell">
-        <a className="wordmark" href="#top" aria-label="outrun.lol home"><span className="mark">↗</span> outrun.lol</a>
-        <nav aria-label="Main navigation">
-          <a className="active" href="#daily">Daily</a>
-          <a href="#rules">Rules</a>
-          <a href="#about">About</a>
-        </nav>
-        <a className="header-link" href="#claim">Claim your spot <span>→</span></a>
-      </header>
-
-      <div id="top" className="hero shell">
-        <div className="eyebrow"><span className="live-dot" /> updated daily · {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-        <h1>Run further.<br /><em>Move up.</em></h1>
-        <p className="hero-copy">A public leaderboard for people who’d rather run than refresh. Connect Strava, log your distance, and put something you care about in front of everyone.</p>
-        <div className="hero-metric">
-          <span className="metric-number">{loading ? "—" : distance(heroDistance)}</span>
-          <span className="metric-caption">your distance today<br /><b>{me?.connected ? "synced from Strava" : "connect to start climbing"}</b></span>
-        </div>
-        <div className="hero-actions">
-          {me?.connected ? <button className="button primary" onClick={() => void sync()} disabled={syncing}>{syncing ? "Syncing…" : "↻ Sync Strava"}</button> : <a className="button primary" href="/api/strava/connect">Connect Strava <span>↗</span></a>}
-          {!me?.connected && <button className="button secondary" onClick={() => void demo()}>Try demo mode</button>}
-        </div>
-        {status && <p className="status" role="status">{status}</p>}
-        {!me?.configured && !me?.connected && <p className="setup-note">Live Strava OAuth is ready. Add your Strava app keys in Vercel to enable it here.</p>}
+  return <main className="app-shell">
+    <header className="topbar">
+      <div className="brand-cluster">
+        <a className="logo" href="#top" aria-label="outrun.lol home"><span className="logo-glyph"><i /><i /><i /></span>outrun.lol</a>
+        <PeriodToggle period={period} onChange={changePeriod} className="period-desktop" />
       </div>
+      <nav aria-label="Main navigation"><a className="active" href="#board">Leaderboard</a><a href="#daily">Daily</a><a href="#categories">Categories</a><a href="#about">About</a></nav>
+      <div className="top-actions"><button aria-label="Search" className="icon-button">⌕</button><button aria-label="Switch to dark mode" className="icon-button">☾</button><a className="mobile-claim" href="#claim">Claim</a></div>
+    </header>
 
-      <section id="daily" className="shell section leaderboard-section">
-        <div className="section-heading"><div><span className="section-kicker">01 / The daily board</span><h2>Today’s top runners</h2></div><span className="section-note">Board resets at midnight<br />UTC</span></div>
-        <div className="podium">
-          {top.map((entry, index) => <a className={`podium-card rank-${index + 1}`} href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={entry.id}>
-            <span className="rank">0{index + 1}</span><span className="arrow">↗</span><span className="avatar">{initials(entry.name)}</span><span className="podium-name">{entry.name}</span><span className="podium-distance">{distance(entry.distanceKm)}</span><span className="podium-headline">{entry.headline}</span><span className="podium-link">{new URL(entry.link).hostname.replace("www.", "")}</span>
-          </a>)}
-        </div>
-      </section>
+    <section id="top" className="intro">
+      <div className="live-pill"><span>● {runnerCount || 0} runners</span> · {visitorCount.toLocaleString()} visitors · <a href="#about">see stats→</a></div>
+      <PeriodToggle period={period} onChange={changePeriod} className="period-mobile" />
+      <h1>Claim #1 for <span className="stepper"><button aria-label="Lower distance to beat" onClick={() => setTargetDistance(Number(Math.max(0, beatDistance - 0.1).toFixed(1)))}>−</button><b>{distance(beatDistance)}</b><button aria-label="Raise distance to beat" onClick={() => setTargetDistance(Number((beatDistance + 0.1).toFixed(1)))}>+</button></span></h1>
+      <p className="intro-copy">Run further than the rest, climb the daily board, and put one link in front of everyone who’s watching. Your distance decides the rank.</p>
+    </section>
 
-      <section id="claim" className="shell claim-section section">
-        <div className="section-heading"><div><span className="section-kicker">02 / Your turn</span><h2>Put your link on the board</h2></div><span className="section-note">Your distance decides rank.<br />Your link gets the attention.</span></div>
-        <form className="claim-form" onSubmit={save}>
-          <label><span>Your link</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="https://yourthing.com" type="url" required /></label>
-          <label><span>One-line pitch</span><input value={headline} onChange={(event) => setHeadline(event.target.value)} placeholder="What are you building?" maxLength={180} /></label>
-          <label className="small-field"><span>Category</span><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)}>{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select></label>
-          <button className="button primary" type="submit">{me?.connected ? "Publish your spot" : "Connect to publish"} <span>→</span></button>
-        </form>
-        <div className="claim-foot"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>Clicks and visitors are counted on every link.</span></div>
-      </section>
+    <section id="claim" className="claim-block">
+      <form onSubmit={save}>
+        <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
+        <label className="category-field"><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)} aria-label="Category">{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select><span aria-hidden="true">⌄</span></label>
+        <button className="claim-button" type="submit">{me?.connected ? "Publish spot" : "Claim rank"}</button>
+      </form>
+      <div className="claim-subline"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>{status || "Clicks and visitors are counted on every link."}</span></div>
+    </section>
 
-      <section className="shell section board-section">
-        <div className="filter-row"><div className="filters" role="group" aria-label="Filter leaderboard">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item}</button>)}</div><span className="entry-count">{visibleEntries.length} runners</span></div>
-        <div className="board" aria-live="polite">{visibleEntries.map((entry, index) => <a className="board-row" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={entry.id}><span className="row-rank">{String(index + 1).padStart(2, "0")}</span><span className="row-avatar">{initials(entry.name)}</span><span className="row-name"><b>{entry.name}</b><small>{entry.headline}</small></span><span className="row-category">{entry.category}</span><span className="row-distance">{distance(entry.distanceKm)}</span><span className="row-clicks">{entry.clicks.toLocaleString()} clicks</span><span className="row-time">{timeSince(entry.updatedAt)}</span><span className="row-arrow">↗</span></a>)}</div>
-      </section>
+    <section id="categories" className="category-strip"><nav aria-label="Ranking categories">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item === "All" && <span>⊞</span>}{item}</button>)}<button className="explore">Explore <span>›</span></button></nav></section>
 
-      <section id="rules" className="shell info-section section"><div><span className="section-kicker">03 / Rules</span><h2>Simple enough to explain<br />on a run.</h2></div><div className="rule-list"><p><b>01</b><span>Connect your Strava account. We read your running activities for today only.</span></p><p><b>02</b><span>Your total running distance sets your place on the daily board. Ties go to the latest sync.</span></p><p><b>03</b><span>Add one link. Every visit and click is counted so you know if the attention was worth it.</span></p></div></section>
+    <section id="board" className="ranking-list" aria-label="Top runners">
+      {loading ? <div className="empty-state">Loading today’s runners…</div> : top.map((entry, index) => <a className={`rank-card card-${index + 1}`} href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={entry.id}>
+        <span className="rank-badge">#{index + 1}</span><span className="rank-avatar">{initials(entry.name)}</span><span className="rank-copy"><b>{entry.name} · {host(entry.link)}</b><span>{entry.headline}</span><small><strong>{entry.category}</strong> · {timeSince(entry.updatedAt)} · {host(entry.link)} · {entry.clicks.toLocaleString()} clicks · see details</small></span><strong className="rank-distance">{distance(entry.distanceKm)}</strong>
+      </a>)}
+    </section>
 
-      <footer id="about" className="site-footer shell"><span>outrun.lol <i>↗</i></span><span>Built for the daily miles.</span><span><a href="#rules">Rules</a> · <a href="mailto:hello@outrun.lol">Say hello</a></span></footer>
-    </main>
-  );
+    <section id="daily" className="daily-preview">
+      <div className="subsection-heading"><h2>Today’s top ranking</h2><a href="#board">See all</a></div>
+      <div className="mini-grid">{top.map((entry, index) => <a className="mini-card" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={entry.id}><span className="mini-rank">#{index + 1}</span><span className="mini-avatar">{initials(entry.name)}</span><span><b>{entry.name}</b><small>{entry.headline}</small><em>{distance(entry.distanceKm)}</em></span></a>)}</div>
+    </section>
+
+    <section className="activity"><h2><span /> Latest activity</h2><div className="activity-list">{entries.slice(0, 5).map((entry, index) => <a href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" key={`${entry.id}-activity`}><span>{entry.name} claimed #{index + 1}</span><small>{distance(entry.distanceKm)} · {timeSince(entry.updatedAt)}</small><b>↗</b></a>)}</div></section>
+
+    <section id="about" className="about"><p>This <a href="#rules">simple side project</a> turns today’s running miles into a public place to be seen.</p><div id="rules" className="about-grid"><p><b>01</b> Connect Strava. We read your running activities for today only.</p><p><b>02</b> Your total distance sets your place. Ties go to the latest sync.</p><p><b>03</b> Add one link. Every click and visitor is counted.</p></div></section>
+    <footer><a href="#top" className="logo"><span className="logo-glyph"><i /><i /><i /></span>outrun.lol</a><span>Built for the daily miles.</span><span><a href="#rules">Rules</a> · <a href="mailto:hello@outrun.lol">Say hello</a></span></footer>
+    {!me?.connected && <div className="demo-float"><button onClick={() => void demo()}>Try demo mode</button>{!me?.configured && <small>Strava OAuth is ready — add app keys in Vercel to connect for real.</small>}</div>}
+  </main>;
 }
