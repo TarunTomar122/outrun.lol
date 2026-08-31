@@ -8,7 +8,7 @@ export function GET(request: Request) {
     return NextResponse.redirect(new URL("/?error=strava-config", url));
   }
   const state = randomBytes(24).toString("hex");
-  const redirectUri = `${url.origin}/api/strava/callback`;
+  const redirectUri = process.env.STRAVA_REDIRECT_URI ?? `${url.origin}/api/strava/callback`;
   const authorize = new URL("https://www.strava.com/oauth/authorize");
   authorize.search = new URLSearchParams({
     client_id: process.env.STRAVA_CLIENT_ID,

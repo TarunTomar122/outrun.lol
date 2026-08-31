@@ -51,6 +51,8 @@ h1 { display: flex; align-items: center; justify-content: center; gap: 8px; flex
 .claim-button:hover { background: var(--accent); }
 .claim-subline { display: flex; justify-content: space-between; margin-top: 11px; padding-inline: 13px; color: var(--quiet); font-size: 12px; }
 .claim-subline span:last-child { color: var(--accent); }
+.sync-button { border: 0; padding: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.sync-button:disabled { cursor: wait; opacity: .65; }
 .category-strip { margin-top: 30px; overflow: hidden; }
 .category-strip nav { display: flex; align-items: center; gap: 25px; overflow-x: auto; padding: 0 2px 5px; }
 .category-strip button { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13px; white-space: nowrap; padding: 8px 0; }

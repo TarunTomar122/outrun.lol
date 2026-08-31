@@ -79,7 +79,7 @@ export default function Home() {
   }, [load]);
 
   const visibleEntries = useMemo(() => category === "All" ? entries : entries.filter((entry) => entry.category === category), [category, entries]);
-  const top = entries.slice(0, 3);
+  const top = visibleEntries.slice(0, 3);
   const topDistance = top[0]?.distanceKm ?? 0;
   const beatDistance = targetDistance ?? Number((topDistance + 0.1).toFixed(1));
   const visitorCount = entries.reduce((total, entry) => total + entry.visitors, 0);
@@ -142,7 +142,7 @@ export default function Home() {
         <label className="category-field"><select value={profileCategory} onChange={(event) => setProfileCategory(event.target.value)} aria-label="Category">{categories.slice(1).map((item) => <option key={item}>{item}</option>)}</select><span aria-hidden="true">⌄</span></label>
         {me?.connected ? <button className="claim-button" type="submit">Publish spot</button> : <a className="claim-button" href="/api/strava/connect">Connect Strava</a>}
       </form>
-      <div className="claim-subline"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>{status || "Clicks and visitors are counted on every link."}</span></div>
+      <div className="claim-subline"><span>{me?.connected ? `Connected as ${me.athlete?.firstname ?? "runner"}` : "No payment. No followers. Just miles."}</span><span>{status || "Clicks and visitors are counted on every link."}</span>{me?.connected && <button className="sync-button" type="button" onClick={() => void sync()} disabled={syncing}>{syncing ? "Syncing…" : "Sync today"}</button>}</div>
     </section>
 
     <section id="categories" className="category-strip"><nav aria-label="Ranking categories">{categories.map((item) => <button className={category === item ? "selected" : ""} key={item} onClick={() => setCategory(item)}>{item === "All" && <span>⊞</span>}{item}</button>)}<button className="explore">Explore <span>›</span></button></nav></section>

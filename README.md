@@ -16,7 +16,7 @@ Strava OAuth needs an app at [strava.com/settings/api](https://www.strava.com/se
 http://localhost:3000/api/strava/callback
 ```
 
-For Vercel, set the same variables with the production callback URL. `KV_REST_API_URL` and `KV_REST_API_TOKEN` are optional; without them, the app uses a process-local store suitable for the demo and local development. Add Vercel KV/Upstash REST persistence before inviting multiple people.
+For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunlol.vercel.app/api/strava/callback` (or your custom domain). `KV_REST_API_URL` and `KV_REST_API_TOKEN` are optional; without them, the app uses a process-local store suitable for the demo and local development. Add Vercel KV/Upstash REST persistence before inviting multiple people.
 
 ## Checks
 
