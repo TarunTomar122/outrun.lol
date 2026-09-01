@@ -74,7 +74,7 @@ h1 .accent { color: var(--accent); }
 .dev-reset { border: 1px dashed var(--accent); border-radius: 16px; padding: 5px 12px; background: transparent; color: var(--accent); font-size: 12px; font-weight: 500; cursor: pointer; }
 .dev-reset:hover { background: var(--peach); }
 .ranking-list { display: grid; gap: 10px; }
-.rank-card { position: relative; min-height: 84px; display: grid; grid-template-columns: 44px 42px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); transition: transform .18s ease, border-color .18s ease; }
+.rank-card { position: relative; min-height: 96px; display: grid; grid-template-columns: 44px 42px minmax(0, 1fr) auto; gap: 16px; align-items: center; padding: 15px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); transition: transform .18s ease, border-color .18s ease; }
 .rank-card:hover { transform: translateY(-2px); border-color: var(--accent); }
 .rank-card.card-1 { border: 2px solid var(--accent); background: var(--peach); }
 .rank-card.card-2 { background: var(--tint-2); }
@@ -89,8 +89,10 @@ h1 .accent { color: var(--accent); }
 .rank-copy small { color: var(--muted); font-size: 12px; }
 .rank-distance { align-self: start; color: var(--accent); font-size: 16px; font-weight: 500; white-space: nowrap; transition: opacity .18s ease; }
 .rank-cover { position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
-.strava-btn { position: absolute; right: 14px; bottom: 12px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 15px; background: var(--card); color: var(--muted); font-size: 11px; font-weight: 500; white-space: nowrap; transition: border-color .15s ease, color .15s ease; }
+.strava-btn { position: absolute; right: 14px; bottom: 13px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border: 1px solid var(--line); border-radius: 15px; background: var(--card); color: var(--muted); font-size: 11px; font-weight: 500; white-space: nowrap; opacity: 0; transform: translateY(4px); pointer-events: none; transition: opacity .18s ease, transform .18s ease, border-color .15s ease, color .15s ease; }
+.rank-card:hover .strava-btn { opacity: 1; transform: none; pointer-events: auto; }
 .strava-btn:hover { border-color: #fc4c02; color: #fc4c02; }
+@media (hover: none) { .strava-btn { opacity: 1; transform: none; pointer-events: auto; } }
 .claim-hint { position: absolute; top: 14px; right: 18px; z-index: 2; padding: 6px 13px; border-radius: 20px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 500; white-space: nowrap; opacity: 0; transform: translateY(-4px); pointer-events: none; box-shadow: 0 6px 18px rgba(237, 117, 90, .35); transition: opacity .18s ease, transform .18s ease; }
 .rank-card:hover .claim-hint { opacity: 1; transform: none; }
 .rank-card:hover .rank-distance { opacity: 0; }
