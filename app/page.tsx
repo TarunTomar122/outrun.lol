@@ -2,6 +2,7 @@
 
 import { CSSProperties, FormEvent, useCallback, useEffect, useState } from "react";
 import type { Entry } from "@/lib/types";
+import { SiteFooter, SiteHeader } from "./chrome";
 
 type Me = { entry: Entry | null };
 type Feedback = { tone: "info" | "success" | "error"; title: string; detail: string };
@@ -20,10 +21,6 @@ function host(link: string) {
 
 function logoFallback(link: string) {
   return host(link).split(".")[0].slice(0, 2).toUpperCase();
-}
-
-function BrandMark() {
-  return <svg className="brand-mark" viewBox="0 0 40 30" fill="none" aria-hidden="true"><path className="brand-speed" d="M3 24h12M3 17h17M7 10h11" /><circle className="brand-runner" cx="29" cy="5" r="2.5" fill="currentColor" /><path className="brand-runner" d="m27 10 5 3-4 6 5 3m-6-11 7-3m-1 14 4 5m-4-5-7 5" /></svg>;
 }
 
 function SiteLogo({ entry }: { entry: Entry }) {
@@ -119,9 +116,7 @@ export default function Home() {
   }
 
   return <main className="app-shell">
-    <header className="topbar">
-      <a className="logo" href="#top" aria-label="outrunn.lol home"><BrandMark />outrunn.lol</a>
-    </header>
+    <SiteHeader />
 
     <section id="top" className="intro">
       <div className="live-pill"><span>{entries.length} runners</span></div>
@@ -151,11 +146,12 @@ export default function Home() {
             <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks</small>
           </a>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
+          <a className="claim-hint" href="#claim" aria-hidden="true">Run {distance(entry.distanceKm + 1)} to claim #{index + 1}</a>
           {entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
         </div>)}
       </div>
     </section>
 
-    <footer><a href="#top" className="logo"><BrandMark />outrunn.lol</a><span>Public proof · daily distance · tracked clicks</span></footer>
+    <SiteFooter />
   </main>;
 }
