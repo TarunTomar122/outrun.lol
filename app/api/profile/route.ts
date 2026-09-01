@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof ProofVerificationError) {
       const messages = {
         invalid: "That doesn’t look like a Strava activity or embed snippet.",
-        unavailable: "We couldn’t open that activity. Make sure it’s public and embeddable.",
+        unavailable: "That run isn’t publicly embeddable. Set its visibility to Everyone, or paste the desktop Embed snippet (it carries the access token).",
         "not-run": "That activity isn’t a Run. Link a Run activity to join the board.",
         "no-distance": "We couldn’t read a distance from that Run.",
         "date-unavailable": "We couldn’t confirm when that activity happened.",

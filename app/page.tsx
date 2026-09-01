@@ -45,7 +45,7 @@ function failureFeedback(result: { code?: string; error?: string; activityDate?:
   }
   const messages: Record<string, Feedback> = {
     invalid: { tone: "error", title: "That proof link needs a check.", detail: "Paste a full Strava activity URL or the complete embed snippet." },
-    unavailable: { tone: "error", title: "We couldn’t open that activity.", detail: "Make sure the activity is public and embeddable, then try again." },
+    unavailable: { tone: "error", title: "That run isn’t publicly embeddable.", detail: "Set the run’s visibility to Everyone, or paste the desktop “Embed” snippet — it carries the access token a private run needs." },
     "not-run": { tone: "error", title: "That activity isn’t a Run.", detail: "Link a Strava Run to join today’s board." },
     "no-distance": { tone: "error", title: "Distance wasn’t available.", detail: "Use a Run with a visible distance in its Strava embed." },
     "date-unavailable": { tone: "error", title: "We couldn’t confirm the date.", detail: "Try the full activity URL or a fresh embed snippet." },
@@ -65,8 +65,16 @@ export default function Home() {
   const [loadError, setLoadError] = useState(false);
   const [visits, setVisits] = useState<number | null>(null);
   const [isDev, setIsDev] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => setIsDev(location.hostname === "localhost" || location.hostname === "127.0.0.1"), []);
+
+  useEffect(() => {
+    if (!showHelp) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setShowHelp(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showHelp]);
 
   async function resetBoard() {
     await fetch("/api/dev/reset", { method: "POST" });
@@ -151,7 +159,16 @@ export default function Home() {
         <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Claim #1"}</button>
       </form>
       {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : <span className="feedback-spinner" />}</span><div className="feedback-text"><strong>{feedback.title}</strong><p>{feedback.detail}</p></div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
-      <div className="claim-subline"><span>Public Runs only · no account required</span><span>Distance is verified from the public activity.</span></div>
+      {feedback?.tone === "error" && <div className="error-help">
+        <p className="error-help-title">For a run to verify, on Strava:</p>
+        <ul>
+          <li><span className="eh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18" /></svg></span><span>Set the <b>activity’s visibility</b> to <b>Everyone</b></span></li>
+          <li><span className="eh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5" /></svg></span><span>Make your <b>profile public</b> — Settings → Privacy Controls</span></li>
+          <li><span className="eh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span>It’s a <b>Run</b> from the <b>last 7 days</b></span></li>
+        </ul>
+        <button type="button" className="error-help-video" onClick={() => setShowHelp(true)}><span aria-hidden="true">▶</span> Watch how to submit (24s)</button>
+      </div>}
+      <div className="claim-subline"><button type="button" className="subline-link" onClick={() => setShowHelp(true)}>New here? Watch how to submit (24s) ↗</button></div>
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
@@ -174,5 +191,12 @@ export default function Home() {
     </section>
 
     <SiteFooter />
+
+    {showHelp && <div className="video-modal" role="dialog" aria-modal="true" aria-label="How to submit" onClick={() => setShowHelp(false)}>
+      <div className="video-modal-inner" onClick={(event) => event.stopPropagation()}>
+        <button className="video-modal-close" type="button" onClick={() => setShowHelp(false)} aria-label="Close">×</button>
+        <video src="/how-to-submit.mp4" controls autoPlay playsInline />
+      </div>
+    </div>}
   </main>;
 }
