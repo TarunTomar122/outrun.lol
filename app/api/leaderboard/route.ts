@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { readSession } from "@/lib/session";
-import { dayKey, getEntries } from "@/lib/store";
+import { getEntries } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -14,5 +14,5 @@ export async function GET(request: NextRequest) {
     else if (sessionEntry.updatedAt > entries[index].updatedAt) entries[index] = sessionEntry;
   }
   entries.sort((a, b) => b.distanceKm - a.distanceKm || b.updatedAt.localeCompare(a.updatedAt));
-  return NextResponse.json({ date: dayKey(), entries });
+  return NextResponse.json({ entries });
 }

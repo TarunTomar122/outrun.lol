@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { readSession, setSession } from "@/lib/session";
 import { getTodayDistance, refreshToken } from "@/lib/strava";
-import { dayKey, getEntry, upsertEntry } from "@/lib/store";
+import { getEntries, upsertEntry } from "@/lib/store";
 import type { Session } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
       current = { ...session, accessToken: token.access_token, refreshToken: token.refresh_token, expiresAt: token.expires_at };
     }
     const distanceKm = await getTodayDistance(current);
-    const previous = await getEntry(dayKey(), `athlete-${current.athleteId}`);
+    const previous = (await getEntries()).find((item) => item.athleteId === current.athleteId);
     const entry = {
-      id: previous?.id ?? `athlete-${current.athleteId}`,
+      id: previous?.id ?? `runner-${current.athleteId}`,
       athleteId: current.athleteId,
       name: previous?.name ?? `${current.athlete.firstname} ${current.athlete.lastname ?? ""}`.trim(),
       avatar: current.athlete.profile,
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       clicks: previous?.clicks ?? 0,
       updatedAt: new Date().toISOString(),
     };
-    await upsertEntry(dayKey(), entry);
+    await upsertEntry(entry);
     const response = NextResponse.json({ distanceKm, athlete: current.athlete });
     setSession(response, { ...current, entry });
     return response;

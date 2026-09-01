@@ -1,7 +1,8 @@
 import type { Entry } from "./types";
 import { fetchSiteMetadata } from "./site-metadata";
+import { active } from "./retention";
 
-type Store = { days: Map<string, Entry[]> };
+type Store = { entries: Entry[] | null; visits: number };
 
 declare global {
   // eslint-disable-next-line no-var
@@ -37,22 +38,24 @@ function parseEntries(value: unknown) {
   }
 }
 
-// v2: seed identity is now scraped from each link, so the old hardcoded snapshots are invalidated.
-function entryKey(date: string) {
-  return `outrun:entries:v2:${date}`;
+// Rolling board: every run holds its spot for 7 days from its last submission (see ./retention).
+const BOARD_KEY = "outrun:board:v1";
+
+function clickKey(id: string) {
+  return `outrun:clicks:${id}`;
 }
 
-function clickKey(date: string, id: string) {
-  return `outrun:clicks:${date}:${id}`;
+function ranked(entries: Entry[]) {
+  return [...entries].sort((a, b) => b.distanceKm - a.distanceKm);
 }
 
-async function withClickCounts(date: string, entries: Entry[]) {
+async function withClickCounts(entries: Entry[]) {
   if (!hasRedis()) return entries;
   return Promise.all(entries.map(async (entry) => {
-    let stored = await redis(["GET", clickKey(date, entry.id)]);
+    let stored = await redis(["GET", clickKey(entry.id)]);
     if (stored === null || stored === undefined) {
-      await redis(["SET", clickKey(date, entry.id), String(entry.clicks), "NX"]);
-      stored = await redis(["GET", clickKey(date, entry.id)]);
+      await redis(["SET", clickKey(entry.id), String(entry.clicks), "NX"]);
+      stored = await redis(["GET", clickKey(entry.id)]);
     }
     const clicks = Number(stored);
     return { ...entry, clicks: Number.isFinite(clicks) ? clicks : entry.clicks };
@@ -60,7 +63,25 @@ async function withClickCounts(date: string, entries: Entry[]) {
 }
 
 // ponytail: memory is the zero-config fallback; Redis handles shared durable counts when attached.
-const memory: Store = (globalThis.__outrunStore ??= { days: new Map() });
+const memory: Store = (globalThis.__outrunStore ??= { entries: null, visits: 0 });
+
+const VISITS_KEY = "outrun:visits";
+
+export async function getVisits() {
+  if (hasRedis()) {
+    const value = Number(await redis(["GET", VISITS_KEY]));
+    return Number.isFinite(value) ? value : 0;
+  }
+  return memory.visits;
+}
+
+export async function bumpVisits() {
+  if (hasRedis()) {
+    const value = Number(await redis(["INCR", VISITS_KEY]));
+    return Number.isFinite(value) ? value : 0;
+  }
+  return (memory.visits += 1);
+}
 
 const seedEntries: Omit<Entry, "updatedAt">[] = [
   { id: "seed-stocksbrew", athleteId: 1001, name: "StocksBrew", siteLogo: "https://stocksbrew.online/icon.svg", link: "https://stocksbrew.online", headline: "A calmer way to make sense of the market.", distanceKm: 24.8, clicks: 0 },
@@ -82,62 +103,66 @@ async function freshSeeds() {
   }));
 }
 
-export async function getEntries(date = dayKey()) {
-  const stored = parseEntries(await redis(["GET", entryKey(date)]));
+// Reads the raw board (unranked, no click merge), prunes expired runs, seeds once when empty.
+async function readBoard(): Promise<Entry[]> {
+  const stored = parseEntries(await redis(["GET", BOARD_KEY]));
   if (stored) {
-    const entries = await withClickCounts(date, stored);
-    memory.days.set(date, entries);
-    return entries;
+    const live = active(stored);
+    if (live.length !== stored.length && hasRedis()) await redis(["SET", BOARD_KEY, JSON.stringify(live)]);
+    memory.entries = live;
+    return live;
   }
-  if (!memory.days.has(date)) {
-    const entries = await freshSeeds();
-    memory.days.set(date, entries);
-    if (hasRedis()) await redis(["SET", entryKey(date), JSON.stringify(entries), "NX"]);
+  if (memory.entries === null) {
+    memory.entries = await freshSeeds();
+    if (hasRedis()) await redis(["SET", BOARD_KEY, JSON.stringify(memory.entries), "NX"]);
   }
-  return withClickCounts(date, memory.days.get(date)!);
+  memory.entries = active(memory.entries);
+  return memory.entries;
 }
 
-async function saveEntries(date: string, entries: Entry[]) {
-  memory.days.set(date, entries);
-  if (hasRedis()) await redis(["SET", entryKey(date), JSON.stringify(entries)]);
+export async function getEntries() {
+  return ranked(await withClickCounts(await readBoard()));
 }
 
-export async function upsertEntry(date: string, entry: Entry) {
-  const entries = await getEntries(date);
+async function saveBoard(entries: Entry[]) {
+  memory.entries = entries;
+  if (hasRedis()) await redis(["SET", BOARD_KEY, JSON.stringify(entries)]);
+}
+
+export async function upsertEntry(entry: Entry) {
+  const entries = await readBoard();
   const index = entries.findIndex((item) => item.id === entry.id);
   if (index === -1) entries.push(entry);
   else entries[index] = { ...entries[index], ...entry };
-  await saveEntries(date, entries);
-  if (hasRedis()) await redis(["SET", clickKey(date, entry.id), String(entry.clicks), "NX"]);
+  await saveBoard(entries);
+  if (hasRedis()) await redis(["SET", clickKey(entry.id), String(entry.clicks), "NX"]);
   return entry;
 }
 
-export async function updateEntry(date: string, id: string, update: (entry: Entry) => Entry) {
-  const entries = await getEntries(date);
+export async function updateEntry(id: string, update: (entry: Entry) => Entry) {
+  const entries = await readBoard();
   const index = entries.findIndex((item) => item.id === id);
   if (index === -1) return null;
   entries[index] = update(entries[index]);
-  await saveEntries(date, entries);
+  await saveBoard(entries);
   return entries[index];
 }
 
-export async function getEntry(date: string, id: string) {
-  return (await getEntries(date)).find((entry) => entry.id === id) ?? null;
+export async function getEntry(id: string) {
+  return (await readBoard()).find((entry) => entry.id === id) ?? null;
 }
 
-export async function trackEntry(date: string, id: string) {
+export async function trackEntry(id: string) {
   if (hasRedis()) {
-    const entry = await getEntry(date, id);
+    const entry = await getEntry(id);
     if (!entry) return null;
-    const value = Number(await redis(["INCR", clickKey(date, id)]));
+    const value = Number(await redis(["INCR", clickKey(id)]));
     const tracked = { ...entry, clicks: Number.isFinite(value) ? value : entry.clicks + 1 };
-    const entries = memory.days.get(date);
-    const index = entries?.findIndex((item) => item.id === id) ?? -1;
-    if (entries && index !== -1) entries[index] = tracked;
+    if (memory.entries) {
+      const index = memory.entries.findIndex((item) => item.id === id);
+      if (index !== -1) memory.entries[index] = tracked;
+    }
     return tracked;
   }
-  return updateEntry(date, id, (entry) => ({
-    ...entry,
-    clicks: entry.clicks + 1,
-  }));
+  return updateEntry(id, (entry) => ({ ...entry, clicks: entry.clicks + 1 }));
 }

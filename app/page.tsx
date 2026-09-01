@@ -38,10 +38,9 @@ function dateLabel(value: string) {
   return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function failureFeedback(result: { code?: string; error?: string; activityDate?: string; expectedDate?: string }): Feedback {
+function failureFeedback(result: { code?: string; error?: string; activityDate?: string }): Feedback {
   if (result.code === "wrong-day" && result.activityDate) {
-    const yesterday = result.expectedDate && Date.parse(`${result.expectedDate}T00:00:00Z`) - Date.parse(`${result.activityDate}T00:00:00Z`) === 86_400_000;
-    return { tone: "error", title: yesterday ? "That Run was yesterday." : `That Run was on ${dateLabel(result.activityDate)}.`, detail: `Submit a Run from ${result.expectedDate ? dateLabel(result.expectedDate) : "today"} to join this board.` };
+    return { tone: "error", title: `That Run was on ${dateLabel(result.activityDate)}.`, detail: "Submit a Run from the last 7 days to join the board." };
   }
   const messages: Record<string, Feedback> = {
     invalid: { tone: "error", title: "That proof link needs a check.", detail: "Paste a full Strava activity URL or the complete embed snippet." },
@@ -56,7 +55,6 @@ function failureFeedback(result: { code?: string; error?: string; activityDate?:
 
 export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [boardDate, setBoardDate] = useState("");
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -64,6 +62,16 @@ export default function Home() {
   const [proofLink, setProofLink] = useState("");
   const [link, setLink] = useState("");
   const [loadError, setLoadError] = useState(false);
+  const [visits, setVisits] = useState<number | null>(null);
+
+  useEffect(() => {
+    const counted = sessionStorage.getItem("outrun-visited");
+    fetch("/api/visits", { method: counted ? "GET" : "POST", cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => setVisits(data.visits))
+      .catch(() => {});
+    try { sessionStorage.setItem("outrun-visited", "1"); } catch { /* private mode */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoadError(false);
@@ -73,7 +81,6 @@ export default function Home() {
         fetch("/api/me", { cache: "no-store" }).then((response) => response.json()),
       ]);
       setEntries(leaderboard.entries);
-      setBoardDate(leaderboard.date);
       setMe(profile);
       if (profile.entry) {
         setProofLink(profile.entry.proofLink ?? "");
@@ -101,7 +108,7 @@ export default function Home() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ proofLink, link }),
       });
-      const result = await response.json() as { entry?: Entry; error?: string; code?: string; activityDate?: string; expectedDate?: string };
+      const result = await response.json() as { entry?: Entry; error?: string; code?: string; activityDate?: string };
       if (!response.ok) {
         setFeedback(failureFeedback(result));
         return;
@@ -119,8 +126,8 @@ export default function Home() {
     <SiteHeader />
 
     <section id="top" className="intro">
-      <div className="live-pill"><span>{entries.length} runners</span></div>
-      <h1>{entries.length ? <>Run <span className="accent">{distance(entries[0].distanceKm + 1)}</span> and claim <span className="accent">#1</span>.</> : <>Post any Run today and claim <span className="accent">#1</span>.</>}</h1>
+      <div className="live-pill"><span>{(visits ?? entries.length).toLocaleString()} runners</span></div>
+      <h1>{entries.length ? <>Run <span className="accent">{distance(entries[0].distanceKm + 0.1)}</span> and claim <span className="accent">#1</span>.</> : <>Post a Run and claim <span className="accent">#1</span>.</>}</h1>
       <p className="intro-copy">Link your public Strava Run, get verified, and put one link in front of the board.</p>
     </section>
 
@@ -135,7 +142,7 @@ export default function Home() {
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
-      <div className="board-heading"><div><h2>Daily</h2><p>{boardDate ? dateLabel(boardDate) : "Today"} · Furthest verified Run wins the day.</p></div></div>
+      <div className="board-heading"><div><h2>Leaderboard</h2><p>Every run holds its spot for 7 days · furthest wins.</p></div></div>
       <div className="ranking-list">
         {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id}>
           <span className="rank-badge">#{index + 1}</span>
@@ -146,7 +153,7 @@ export default function Home() {
             <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks</small>
           </a>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
-          <a className="claim-hint" href="#claim" aria-hidden="true">Run {distance(entry.distanceKm + 1)} to claim #{index + 1}</a>
+          <a className="claim-hint" href="#claim" aria-hidden="true">Run {distance(entry.distanceKm + 0.1)} to claim #{index + 1}</a>
           {entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
         </div>)}
       </div>

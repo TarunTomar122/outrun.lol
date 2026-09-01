@@ -70,7 +70,7 @@ async function htmlAt(url: string) {
   }
 }
 
-export async function verifyStravaActivity(value: string, today: string): Promise<VerifiedActivity> {
+export async function verifyStravaActivity(value: string, validDates: string[]): Promise<VerifiedActivity> {
   const { id, token } = proofDetails(value);
   const query = token ? `?token=${encodeURIComponent(token)}` : "";
   const html = await htmlAt(`https://strava-embeds.com/activity/${id}${query}`);
@@ -94,7 +94,7 @@ export async function verifyStravaActivity(value: string, today: string): Promis
     date = exactText ? exactDate(exactText) : "";
   }
   if (!date) return fail("date-unavailable");
-  if (date !== today) return fail("wrong-day", date);
+  if (!validDates.includes(date)) return fail("wrong-day", date);
 
   return {
     activityUrl: `https://www.strava.com/activities/${id}`,
