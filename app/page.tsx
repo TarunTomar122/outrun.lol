@@ -166,9 +166,9 @@ export default function Home() {
           <li><span className="eh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5" /></svg></span><span>Make your <b>profile public</b> — Settings → Privacy Controls</span></li>
           <li><span className="eh-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg></span><span>It’s a <b>Run</b> from the <b>last 7 days</b></span></li>
         </ul>
-        <button type="button" className="error-help-video" onClick={() => setShowHelp(true)}><span aria-hidden="true">▶</span> Watch how to submit (24s)</button>
+        <button type="button" className="error-help-video" onClick={() => setShowHelp(true)}><span aria-hidden="true">▶</span> Watch how to submit (29s)</button>
       </div>}
-      <div className="claim-subline"><button type="button" className="subline-link" onClick={() => setShowHelp(true)}>New here? Watch how to submit (24s) ↗</button></div>
+      <div className="claim-subline"><button type="button" className="subline-link" onClick={() => setShowHelp(true)}>New here? Watch how to submit (29s) ↗</button></div>
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
