@@ -147,7 +147,7 @@ export default function Home() {
     <SiteHeader />
 
     <section id="top" className="intro">
-      <div className="live-pill"><span>{(visits ?? entries.length).toLocaleString()} runners</span></div>
+      <div className="live-pill"><span>{(visits ?? entries.length).toLocaleString()} runners visited</span></div>
       <h1>{entries.length ? <>Run <span className="accent">{distance(entries[0].distanceKm + 0.1)}</span> and claim <span className="accent">#1</span>.</> : <>Post a Run and claim <span className="accent">#1</span>.</>}</h1>
       <p className="intro-copy">Link your public Strava Run, get verified, and put one link in front of the board.</p>
     </section>
