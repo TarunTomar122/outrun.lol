@@ -153,7 +153,7 @@ export default function Home() {
             <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks</small>
           </a>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
-          <a className="claim-hint" href="#claim" aria-hidden="true">Run {distance(entry.distanceKm + 0.1)} to claim #{index + 1}</a>
+          <span className="claim-hint" aria-hidden="true">Run {distance(entry.distanceKm + 0.1)} to claim #{index + 1}</span>
           {entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
         </div>)}
       </div>
