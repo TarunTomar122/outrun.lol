@@ -25,20 +25,57 @@ function fail(code: ProofFailureCode, activityDate?: string): never {
   throw new ProofVerificationError(code, activityDate);
 }
 
-function proofDetails(value: string): ActivityProof {
+// Sync fast-path: embed snippet or a full strava.com/activities URL. Returns null when it needs resolving.
+export function parseProof(value: string): ActivityProof | null {
   const embedId = value.match(/data-embed-id=["'](\d{4,20})["']/i);
   if (embedId) return { id: embedId[1], token: value.match(/data-token=["']([^"']+)["']/i)?.[1] };
 
   let url: URL;
   try {
-    url = new URL(value);
+    url = new URL(value.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  if (["strava.com", "www.strava.com", "strava-embeds.com"].includes(url.hostname)) {
+    const match = url.pathname.match(url.hostname === "strava-embeds.com" ? /\/activity\/(\d{4,20})(?:\/|$)/ : /\/activities\/(\d{4,20})(?:\/|$)/);
+    return match ? { id: match[1], token: url.searchParams.get("token") ?? undefined } : null;
+  }
+  return null;
+}
+
+// Resolve a mobile share link (e.g. strava.app.link/xxxx) to an activity id by following it server-side.
+// SSRF guard: only ever fetch Strava-owned hosts.
+async function resolveProof(value: string): Promise<ActivityProof> {
+  const direct = parseProof(value);
+  if (direct) return direct;
+
+  let url: URL;
+  try {
+    url = new URL(value.trim());
   } catch {
     return fail("invalid");
   }
-  if (url.protocol !== "https:" || !["strava.com", "www.strava.com", "strava-embeds.com"].includes(url.hostname)) return fail("invalid");
-  const match = url.pathname.match(url.hostname === "strava-embeds.com" ? /\/activity\/(\d{4,20})(?:\/|$)/ : /\/activities\/(\d{4,20})(?:\/|$)/);
-  if (!match) return fail("invalid");
-  return { id: match[1], token: url.searchParams.get("token") ?? undefined };
+  const host = url.hostname;
+  if (url.protocol !== "https:" || !(host === "strava.app.link" || host === "strava.com" || host.endsWith(".strava.com"))) return fail("invalid");
+
+  let finalUrl: string, text: string;
+  try {
+    const response = await fetch(url.toString(), {
+      redirect: "follow",
+      signal: AbortSignal.timeout(8000),
+      headers: { "user-agent": "Mozilla/5.0 (compatible; outrunn.lol activity verifier)" },
+      cache: "no-store",
+    });
+    finalUrl = response.url;
+    text = await response.text();
+  } catch {
+    return fail("unavailable");
+  }
+  // The id shows up either in the resolved URL or in the page's canonical/branch fallback data.
+  const id = finalUrl.match(/\/activities\/(\d{4,20})/)?.[1] ?? text.match(/\/activities\/(\d{4,20})/)?.[1];
+  if (!id) return fail("invalid");
+  return { id };
 }
 
 function decodeHtml(value: string) {
@@ -71,7 +108,7 @@ async function htmlAt(url: string) {
 }
 
 export async function verifyStravaActivity(value: string, validDates: string[]): Promise<VerifiedActivity> {
-  const { id, token } = proofDetails(value);
+  const { id, token } = await resolveProof(value);
   const query = token ? `?token=${encodeURIComponent(token)}` : "";
   const html = await htmlAt(`https://strava-embeds.com/activity/${id}${query}`);
   const type = html.match(/<div class="type-and-date">[\s\S]*?<title>([^<]+)<\/title>/i)?.[1]?.trim();

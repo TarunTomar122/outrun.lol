@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The proof verifier accepts full activity URLs such as `https://www.strava.com/activities/1234567890` and Strava embed snippets containing `data-embed-id` and `data-token`. The activity must be public and embeddable. Strava’s mobile `strava.app.link` short links do not contain the activity ID, so copy the full activity URL or embed snippet when submitting proof.
+The proof verifier accepts full activity URLs such as `https://www.strava.com/activities/1234567890`, Strava embed snippets containing `data-embed-id` and `data-token`, and mobile `strava.app.link` share links. Share links don't contain the activity ID, so the server follows the link (Strava hosts only) to discover it, then verifies the public embed. The activity must be public and embeddable.
 
 The optional Strava OAuth connector needs an app at [strava.com/settings/api](https://www.strava.com/settings/api). Set the callback to:
 

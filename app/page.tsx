@@ -146,7 +146,7 @@ export default function Home() {
 
     <section id="claim" className="claim-block">
       <form className="claim-form" onSubmit={save}>
-        <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Strava activity URL or embed snippet" type="text" required aria-label="Strava activity URL or embed snippet" /></label>
+        <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Strava activity URL, share link, or embed" type="text" required aria-label="Strava activity URL, share link, or embed" /></label>
         <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
         <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Claim #1"}</button>
       </form>
