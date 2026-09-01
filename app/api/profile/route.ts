@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomInt } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { readSession, setSession } from "@/lib/session";
-import { dayKey, getEntry, upsertEntry } from "@/lib/store";
+import { dayKey, getEntries, upsertEntry } from "@/lib/store";
 import type { Session } from "@/lib/types";
 import { ProofVerificationError, verifyStravaActivity } from "@/lib/strava-proof";
 import { fetchSiteMetadata } from "@/lib/site-metadata";
@@ -44,7 +44,12 @@ export async function POST(request: NextRequest) {
     }
     return NextResponse.json({ error: "We could not verify that activity. Use a public Run from today that allows embedding." }, { status: 422 });
   }
-  const previous = current.entry ?? await getEntry(expectedDate, `athlete-${current.athleteId}`);
+  const dayEntries = await getEntries(expectedDate);
+  const previous = current.entry ?? dayEntries.find((item) => item.athleteId === current.athleteId);
+  // One Strava run holds one link: block reusing an activity already claimed by someone else today.
+  if (dayEntries.some((item) => item.proofLink === verified.activityUrl && item.athleteId !== current.athleteId)) {
+    return NextResponse.json({ error: "That Strava run is already on today’s board.", code: "run-claimed" }, { status: 409 });
+  }
   const linkChanged = previous?.link !== link;
   const metadata = linkChanged ? await fetchSiteMetadata(link) : {};
   const entry = {

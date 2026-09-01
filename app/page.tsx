@@ -52,6 +52,7 @@ function failureFeedback(result: { code?: string; error?: string; activityDate?:
     "not-run": { tone: "error", title: "That activity isn’t a Run.", detail: "Link a Strava Run to join today’s board." },
     "no-distance": { tone: "error", title: "Distance wasn’t available.", detail: "Use a Run with a visible distance in its Strava embed." },
     "date-unavailable": { tone: "error", title: "We couldn’t confirm the date.", detail: "Try the full activity URL or a fresh embed snippet." },
+    "run-claimed": { tone: "error", title: "That run is already on the board.", detail: "Each Strava run holds one link. Post a different run to claim a spot." },
   };
   return messages[result.code ?? ""] ?? { tone: "error", title: "We couldn’t verify that activity.", detail: result.error ?? "Try a public Run from today." };
 }
