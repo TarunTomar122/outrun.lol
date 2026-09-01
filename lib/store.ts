@@ -1,4 +1,5 @@
 import type { Entry } from "./types";
+import { fetchSiteMetadata } from "./site-metadata";
 
 type Store = { days: Map<string, Entry[]> };
 
@@ -36,8 +37,9 @@ function parseEntries(value: unknown) {
   }
 }
 
+// v2: seed identity is now scraped from each link, so the old hardcoded snapshots are invalidated.
 function entryKey(date: string) {
-  return `outrun:entries:${date}`;
+  return `outrun:entries:v2:${date}`;
 }
 
 function clickKey(date: string, id: string) {
@@ -71,8 +73,13 @@ export function dayKey(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-function freshSeeds() {
-  return seedEntries.map((entry) => ({ ...entry, updatedAt: new Date().toISOString() }));
+// ponytail: seed identity (name/headline/logo) is scraped live from each link so nothing is hardcoded; the seed literals are the fallback if a fetch fails.
+async function freshSeeds() {
+  const updatedAt = new Date().toISOString();
+  return Promise.all(seedEntries.map(async (entry) => {
+    const metadata = await fetchSiteMetadata(entry.link);
+    return { ...entry, name: metadata.siteName || entry.name, headline: metadata.headline || entry.headline, siteLogo: metadata.siteLogo ?? entry.siteLogo, updatedAt };
+  }));
 }
 
 export async function getEntries(date = dayKey()) {
@@ -83,7 +90,7 @@ export async function getEntries(date = dayKey()) {
     return entries;
   }
   if (!memory.days.has(date)) {
-    const entries = freshSeeds();
+    const entries = await freshSeeds();
     memory.days.set(date, entries);
     if (hasRedis()) await redis(["SET", entryKey(date), JSON.stringify(entries), "NX"]);
   }

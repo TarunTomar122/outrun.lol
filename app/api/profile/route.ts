@@ -5,6 +5,7 @@ import { readSession, setSession } from "@/lib/session";
 import { dayKey, getEntry, upsertEntry } from "@/lib/store";
 import type { Session } from "@/lib/types";
 import { ProofVerificationError, verifyStravaActivity } from "@/lib/strava-proof";
+import { fetchSiteMetadata } from "@/lib/site-metadata";
 
 function anonymousSession(): Session {
   const athleteId = randomInt(1_000_000_000, 2_000_000_000);
@@ -44,14 +45,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "We could not verify that activity. Use a public Run from today that allows embedding." }, { status: 422 });
   }
   const previous = current.entry ?? await getEntry(expectedDate, `athlete-${current.athleteId}`);
+  const linkChanged = previous?.link !== link;
+  const metadata = linkChanged ? await fetchSiteMetadata(link) : {};
   const entry = {
     id: previous?.id ?? `runner-${current.athleteId}`,
     athleteId: current.athleteId,
-    name: verified.athleteName,
+    name: metadata.siteName || previous?.name || verified.athleteName,
     avatar: current.athlete.profile,
+    siteLogo: metadata.siteLogo ?? previous?.siteLogo,
     link,
     proofLink: verified.activityUrl,
-    headline: previous?.headline || "Running a little further today.",
+    headline: metadata.headline || previous?.headline || "Running a little further today.",
     distanceKm: verified.distanceKm,
     clicks: previous?.clicks ?? 0,
     updatedAt: new Date().toISOString(),

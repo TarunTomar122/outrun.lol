@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { CSSProperties, FormEvent, useCallback, useEffect, useState } from "react";
 import type { Entry } from "@/lib/types";
 
 type Me = { entry: Entry | null };
@@ -28,7 +28,6 @@ function BrandMark() {
 
 function SiteLogo({ entry }: { entry: Entry }) {
   const [failed, setFailed] = useState(false);
-  if (host(entry.link) === "yourtrace.online") return <span className="site-logo site-logo-art" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M20 28c0-9 5.5-16 12-16s12 7 12 16c0 6-2.5 10-7 13v4H27v-4c-4.5-3-7-7-7-13Z" /><path d="M28 45h8M25 51h14M29 57h6" /><path d="M24 26c2 7 7 8 8 8 0-8 4-12 8-8" /></svg></span>;
   if (entry.siteLogo && !failed) return <img className="site-logo" src={entry.siteLogo} alt="" width="42" height="42" onError={() => setFailed(true)} />;
   return <span className="site-logo site-logo-fallback" aria-hidden="true">{logoFallback(entry.link)}</span>;
 }
@@ -66,20 +65,27 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [proofLink, setProofLink] = useState("");
   const [link, setLink] = useState("");
+  const [loadError, setLoadError] = useState(false);
 
   const load = useCallback(async () => {
-    const [leaderboard, profile] = await Promise.all([
-      fetch("/api/leaderboard", { cache: "no-store" }).then((response) => response.json()),
-      fetch("/api/me", { cache: "no-store" }).then((response) => response.json()),
-    ]);
-    setEntries(leaderboard.entries);
-    setBoardDate(leaderboard.date);
-    setMe(profile);
-    if (profile.entry) {
-      setProofLink(profile.entry.proofLink ?? "");
-      setLink(profile.entry.link);
+    setLoadError(false);
+    try {
+      const [leaderboard, profile] = await Promise.all([
+        fetch("/api/leaderboard", { cache: "no-store" }).then((response) => response.json()),
+        fetch("/api/me", { cache: "no-store" }).then((response) => response.json()),
+      ]);
+      setEntries(leaderboard.entries);
+      setBoardDate(leaderboard.date);
+      setMe(profile);
+      if (profile.entry) {
+        setProofLink(profile.entry.proofLink ?? "");
+        setLink(profile.entry.link);
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -114,14 +120,12 @@ export default function Home() {
   return <main className="app-shell">
     <header className="topbar">
       <a className="logo" href="#top" aria-label="outrunn.lol home"><BrandMark />outrunn.lol</a>
-      <nav aria-label="Main navigation"><a className="active" href="#board">Daily</a><a href="#claim">Submit</a></nav>
-      <a className="mobile-claim" href="#claim">Submit</a>
     </header>
 
     <section id="top" className="intro">
-      <div className="live-pill"><span>● {entries.length} runners</span></div>
-      <h1>Daily</h1>
-      <p className="intro-copy">Who ran the furthest today? Link your public Strava Run, get verified, and put one link in front of the board.</p>
+      <div className="live-pill"><span>{entries.length} runners</span></div>
+      <h1>{entries.length ? <>Run <span className="accent">{distance(entries[0].distanceKm + 1)}</span> and claim <span className="accent">#1</span>.</> : <>Post any Run today and claim <span className="accent">#1</span>.</>}</h1>
+      <p className="intro-copy">Link your public Strava Run, get verified, and put one link in front of the board.</p>
     </section>
 
     <section id="claim" className="claim-block">
@@ -137,13 +141,13 @@ export default function Home() {
     <section id="board" className="board" aria-label="Daily running leaderboard">
       <div className="board-heading"><div><h2>Daily</h2><p>{boardDate ? dateLabel(boardDate) : "Today"} · Furthest verified Run wins the day.</p></div><span>Live · {entries.length} runners</span></div>
       <div className="ranking-list">
-        {loading ? <div className="empty-state">Loading today’s runners…</div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} key={entry.id}>
+        {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id}>
           <span className="rank-badge">#{index + 1}</span>
           <SiteLogo entry={entry} />
           <a className="rank-copy" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer">
-            <b>{entry.name} · {host(entry.link)}</b>
+            <b>{host(entry.link)}</b>
             <span>{entry.headline}</span>
-            <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks · promote</small>
+            <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks</small>
           </a>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
           {entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
