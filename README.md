@@ -1,10 +1,46 @@
 # outrunn.lol
 
-The daily running leaderboard. Link a public Strava activity, verify today’s running distance, and publish one link on the board.
+**Promote your product by going for a run.**
 
-The launch flow does not require an account or Strava API credentials. A runner submits a public activity URL; the server reads the activity from Strava’s embed page and only accepts a Run dated today. The promotion link is tracked separately.
+A leaderboard for founders who run. Link a public Strava run, get it verified,
+and your product link rides the board for 7 days. Furthest verified run sits at
+#1, so the harder you run, the more people see your thing. One run, a whole week
+of free traffic.
 
-## Local setup
+No account. No Strava API key. No paywall. Just run.
+
+## Demo
+
+- **Try it live:** https://outrunn.lol
+- **Watch the 30s walkthrough:** https://outrunn.lol/how-to-submit.mp4
+
+## How it works
+
+- **Verified from Strava, no API key.** Paste a public Strava run (full activity
+  URL, mobile `strava.app.link` share link, or embed snippet). The server reads
+  distance, type, and date straight from Strava's public embed. No login, no
+  OAuth, no account.
+- **Runs from the last 7 days count**, and each run holds its spot on the board
+  for 7 days from when it was submitted, then drops off. Run again to refresh it.
+- **Your link, auto-branded.** Site name, logo, and tagline are scraped from the
+  link you submit, so there's nothing to fill in.
+- **Climb by going further.** To take a rank, post a run just 0.1 km longer than
+  the entry above you.
+- **One run, one link.** The same activity can't be reused to claim two spots.
+- **Outbound clicks are tracked** per entry and shown on the board.
+
+Runs must be **public and embeddable** (activity visibility set to Everyone, and
+a public profile). Private or followers-only runs need the desktop embed snippet,
+which carries an access token.
+
+## Tech
+
+- [Next.js](https://nextjs.org) (App Router) + TypeScript
+- [Upstash Redis](https://upstash.com) for the board, click counts, and visits
+  (optional — falls back to in-memory storage for local dev)
+- Zero UI dependencies; hand-rolled CSS and a tiny canvas confetti
+
+## Run it locally
 
 ```sh
 npm install
@@ -12,71 +48,38 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The proof verifier accepts full activity URLs such as `https://www.strava.com/activities/1234567890`, Strava embed snippets containing `data-embed-id` and `data-token`, and mobile `strava.app.link` share links. Share links don't contain the activity ID, so the server follows the link (Strava hosts only) to discover it, then verifies the public embed. The activity must be public and embeddable.
+Open http://localhost:3000 (or set `PORT=3001` if that port is busy).
 
-The optional Strava OAuth connector needs an app at [strava.com/settings/api](https://www.strava.com/settings/api). Set the callback to:
+### Environment
 
-```text
-http://localhost:3000/api/strava/callback
-```
+Everything works with no config — without Redis the app keeps the board in
+process memory (counts reset on restart). For durable, shared storage, add an
+Upstash Redis database and set either the `outrun_KV_REST_API_URL` /
+`outrun_KV_REST_API_TOKEN` pair or the standard `UPSTASH_REDIS_REST_URL` /
+`UPSTASH_REDIS_REST_TOKEN` names.
 
-For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunn.lol/api/strava/callback` (or your Vercel URL) only if enabling the optional connector. Attach an Upstash Redis database through Vercel Marketplace for durable leaderboard and click-count storage. Without Redis variables, the app falls back to process memory for local development.
+Set `SESSION_SECRET` to any random string for signed sessions.
 
-## Deployment
-
-- Repository: <https://github.com/TarunTomar122/outrun.lol>
-- Production: <https://outrunlol.vercel.app>
-- Custom domain: <https://outrunn.lol>
-- `www`: <https://www.outrunn.lol>
-- Vercel project: <https://vercel.com/yourtraceonline-5491s-projects/outrun.lol>
-
-### DNS
-
-The domain uses Hostinger DNS and is live on Vercel with these records:
-
-```text
-A      @    76.76.21.21  TTL 300
-CNAME  www  outrunn.lol  TTL 300
-```
-
-Vercel manages and automatically renews the HTTPS certificates for both hostnames.
-
-### Storage and click tracking
-
-The Vercel project uses Upstash Redis through the Vercel Marketplace. The integration provides the Redis REST URL and token as environment variables. Secret values stay in Vercel and `.env.local`; they must never be committed.
-
-The app accepts the project-prefixed `outrun_KV_REST_API_URL` and `outrun_KV_REST_API_TOKEN` variables, plus the standard `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` names. Redis stores the daily entries and click counts. Without Redis variables, local development uses process memory and resets counts on restart.
-
-Each leaderboard promotion link goes through `/api/redirect/[id]`. The route atomically increments that entry’s daily click count, then returns a `307` redirect to the destination. Outrun tracks outbound clicks only; visitor analytics on the promoted sites belong to those sites.
-
-### Daily board
-
-The board date uses `Asia/Kolkata`, so a new board starts at 12:00 AM IST. No cron job is needed: date-scoped storage keys switch automatically on the first request after midnight.
-
-### Local server
-
-```sh
-npm install
-npm run dev
-```
-
-If port 3000 is occupied:
-
-```sh
-PORT=3001 npm run dev
-```
-
-Open <http://localhost:3000> or <http://localhost:3001>.
-
-### Deploy
-
-```sh
-vercel --prod --yes
-```
+The Strava OAuth connector is optional (the core flow needs no Strava app). To
+enable it, create an app at [strava.com/settings/api](https://www.strava.com/settings/api)
+with callback `http://localhost:3000/api/strava/callback` and set the client id,
+secret, and redirect uri env vars.
 
 ## Checks
 
 ```sh
 npm run typecheck
 npm run build
+node --test lib/*.test.ts  # unit tests for parsing + retention
 ```
+
+## Contributing
+
+It's a small, free, open-source side project — issues and PRs are very welcome.
+Good first things to poke at: the Strava proof parser (`lib/strava-proof.ts`),
+site-metadata scraping (`lib/site-metadata.ts`), and the rolling-board store
+(`lib/store.ts`).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
