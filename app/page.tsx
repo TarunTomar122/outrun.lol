@@ -140,7 +140,7 @@ export default function Home() {
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
-      <div className="board-heading"><div><h2>Daily</h2><p>{boardDate ? dateLabel(boardDate) : "Today"} · Furthest verified Run wins the day.</p></div><span>Live · {entries.length} runners</span></div>
+      <div className="board-heading"><div><h2>Daily</h2><p>{boardDate ? dateLabel(boardDate) : "Today"} · Furthest verified Run wins the day.</p></div></div>
       <div className="ranking-list">
         {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id}>
           <span className="rank-badge">#{index + 1}</span>
