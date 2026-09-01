@@ -22,6 +22,63 @@ http://localhost:3000/api/strava/callback
 
 For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunn.lol/api/strava/callback` (or your Vercel URL) only if enabling the optional connector. Attach an Upstash Redis database through Vercel Marketplace for durable leaderboard and click-count storage. Without Redis variables, the app falls back to process memory for local development.
 
+## Deployment
+
+- Repository: <https://github.com/TarunTomar122/outrun.lol>
+- Production: <https://outrunlol.vercel.app>
+- Custom domain: <https://outrunn.lol> (pending DNS configuration)
+- Vercel project: <https://vercel.com/yourtraceonline-5491s-projects/outrun.lol>
+
+### DNS
+
+The custom domain is attached to Vercel. Add this record at the domain registrar:
+
+```text
+A  outrunn.lol  76.76.21.21
+```
+
+Vercel nameservers can be used instead:
+
+```text
+ns1.vercel-dns.com
+ns2.vercel-dns.com
+```
+
+The domain will resolve after the registrar applies either configuration.
+
+### Storage and click tracking
+
+The Vercel project uses Upstash Redis through the Vercel Marketplace. The integration provides the Redis REST URL and token as environment variables. Secret values stay in Vercel and `.env.local`; they must never be committed.
+
+The app accepts the project-prefixed `outrun_KV_REST_API_URL` and `outrun_KV_REST_API_TOKEN` variables, plus the standard `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` names. Redis stores the daily entries and click counts. Without Redis variables, local development uses process memory and resets counts on restart.
+
+Each leaderboard promotion link goes through `/api/redirect/[id]`. The route atomically increments that entry’s daily click count, then returns a `307` redirect to the destination. Outrun tracks outbound clicks only; visitor analytics on the promoted sites belong to those sites.
+
+### Daily board
+
+The board date uses `Asia/Kolkata`, so a new board starts at 12:00 AM IST. No cron job is needed: date-scoped storage keys switch automatically on the first request after midnight.
+
+### Local server
+
+```sh
+npm install
+npm run dev
+```
+
+If port 3000 is occupied:
+
+```sh
+PORT=3001 npm run dev
+```
+
+Open <http://localhost:3000> or <http://localhost:3001>.
+
+### Deploy
+
+```sh
+vercel --prod --yes
+```
+
 ## Checks
 
 ```sh
