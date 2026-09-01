@@ -26,25 +26,20 @@ For Vercel, set `STRAVA_REDIRECT_URI` to `https://outrunn.lol/api/strava/callbac
 
 - Repository: <https://github.com/TarunTomar122/outrun.lol>
 - Production: <https://outrunlol.vercel.app>
-- Custom domain: <https://outrunn.lol> (pending DNS configuration)
+- Custom domain: <https://outrunn.lol>
+- `www`: <https://www.outrunn.lol>
 - Vercel project: <https://vercel.com/yourtraceonline-5491s-projects/outrun.lol>
 
 ### DNS
 
-The custom domain is attached to Vercel. Add this record at the domain registrar:
+The domain uses Hostinger DNS and is live on Vercel with these records:
 
 ```text
-A  outrunn.lol  76.76.21.21
+A      @    76.76.21.21  TTL 300
+CNAME  www  outrunn.lol  TTL 300
 ```
 
-Vercel nameservers can be used instead:
-
-```text
-ns1.vercel-dns.com
-ns2.vercel-dns.com
-```
-
-The domain will resolve after the registrar applies either configuration.
+Vercel manages and automatically renews the HTTPS certificates for both hostnames.
 
 ### Storage and click tracking
 
