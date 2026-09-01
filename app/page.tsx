@@ -3,6 +3,7 @@
 import { CSSProperties, FormEvent, useCallback, useEffect, useState } from "react";
 import type { Entry } from "@/lib/types";
 import { SiteFooter, SiteHeader } from "./chrome";
+import { celebrate } from "./confetti";
 
 type Me = { entry: Entry | null };
 type Feedback = { tone: "info" | "success" | "error"; title: string; detail: string };
@@ -63,6 +64,17 @@ export default function Home() {
   const [link, setLink] = useState("");
   const [loadError, setLoadError] = useState(false);
   const [visits, setVisits] = useState<number | null>(null);
+  const [isDev, setIsDev] = useState(false);
+
+  useEffect(() => setIsDev(location.hostname === "localhost" || location.hostname === "127.0.0.1"), []);
+
+  async function resetBoard() {
+    await fetch("/api/dev/reset", { method: "POST" });
+    setProofLink("");
+    setLink("");
+    setFeedback(null);
+    await load();
+  }
 
   useEffect(() => {
     const counted = sessionStorage.getItem("outrun-visited");
@@ -114,7 +126,8 @@ export default function Home() {
         return;
       }
       await load();
-      setFeedback({ tone: "success", title: "You’re on today’s board.", detail: `${result.entry?.name ?? "Your result"} · ${result.entry ? distance(result.entry.distanceKm) : "Distance verified"}. Your link is live.` });
+      celebrate();
+      setFeedback({ tone: "success", title: "You’re on the board!", detail: `${result.entry?.name ?? "Your result"} · ${result.entry ? distance(result.entry.distanceKm) : "Distance verified"}. Your link is live.` });
     } catch {
       setFeedback({ tone: "error", title: "The check timed out.", detail: "Strava took too long to respond. Try again in a moment." });
     } finally {
@@ -137,14 +150,15 @@ export default function Home() {
         <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
         <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Claim #1"}</button>
       </form>
-      {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : "…"}</span><div><strong>{feedback.title}</strong><p>{feedback.detail}</p></div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
+      {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : <span className="feedback-spinner" />}</span><div className="feedback-text"><strong>{feedback.title}</strong><p>{feedback.detail}</p></div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
       <div className="claim-subline"><span>Public Runs only · no account required</span><span>Distance is verified from the public activity.</span></div>
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
-      <div className="board-heading"><div><h2>Leaderboard</h2><p>Every run holds its spot for 7 days · furthest wins.</p></div></div>
+      <div className="board-heading"><div><h2>Leaderboard</h2><p>Every run holds its spot for 7 days · furthest wins.</p></div>{isDev && <button className="dev-reset" type="button" onClick={resetBoard}>Reset (dev)</button>}</div>
       <div className="ranking-list">
-        {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <a className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id} href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer">
+        {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id}>
+          <a className="rank-cover" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer" aria-label={`Visit ${host(entry.link)}`} />
           <span className="rank-badge">#{index + 1}</span>
           <SiteLogo entry={entry} />
           <div className="rank-copy">
@@ -154,7 +168,8 @@ export default function Home() {
           </div>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
           <span className="claim-hint" aria-hidden="true">Run {distance(entry.distanceKm + 0.1)} to claim #{index + 1}</span>
-        </a>)}
+          {entry.proofLink && <a className="strava-btn" href={entry.proofLink} target="_blank" rel="noreferrer">View on Strava ↗</a>}
+        </div>)}
       </div>
     </section>
 

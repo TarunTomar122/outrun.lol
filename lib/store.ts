@@ -152,6 +152,16 @@ export async function getEntry(id: string) {
   return (await readBoard()).find((entry) => entry.id === id) ?? null;
 }
 
+// Empties the board (and each entry's click count). Used by the dev reset endpoint.
+export async function clearEntries() {
+  const entries = await readBoard();
+  if (hasRedis()) {
+    for (const entry of entries) await redis(["DEL", clickKey(entry.id)]);
+    await redis(["SET", BOARD_KEY, "[]"]);
+  }
+  memory.entries = [];
+}
+
 export async function trackEntry(id: string) {
   if (hasRedis()) {
     const entry = await getEntry(id);
