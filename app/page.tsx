@@ -144,18 +144,17 @@ export default function Home() {
     <section id="board" className="board" aria-label="Daily running leaderboard">
       <div className="board-heading"><div><h2>Leaderboard</h2><p>Every run holds its spot for 7 days · furthest wins.</p></div></div>
       <div className="ranking-list">
-        {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <div className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id}>
+        {loading ? Array.from({ length: 3 }, (_, index) => <div className="rank-card skeleton" key={index} aria-hidden="true"><span className="sk sk-badge" /><span className="sk sk-logo" /><div className="sk-copy"><span className="sk sk-line" /><span className="sk sk-line short" /><span className="sk sk-line tiny" /></div><span className="sk sk-distance" /></div>) : loadError ? <div className="empty-state empty-error"><p>The board didn’t load.</p><button type="button" className="retry-button" onClick={() => { setLoading(true); void load(); }}>Try again</button></div> : entries.length === 0 ? <div className="empty-state">No runs yet. Be the first on the board.</div> : entries.map((entry, index) => <a className={`rank-card card-${Math.min(index + 1, 3)}`} style={{ "--i": index } as CSSProperties} key={entry.id} href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer">
           <span className="rank-badge">#{index + 1}</span>
           <SiteLogo entry={entry} />
-          <a className="rank-copy" href={`/api/redirect/${entry.id}`} target="_blank" rel="noreferrer">
+          <div className="rank-copy">
             <b>{host(entry.link)}</b>
             <span>{entry.headline}</span>
             <small>{timeSince(entry.updatedAt)} · {entry.clicks.toLocaleString()} clicks</small>
-          </a>
+          </div>
           <strong className="rank-distance">{distance(entry.distanceKm)}</strong>
           <span className="claim-hint" aria-hidden="true">Run {distance(entry.distanceKm + 0.1)} to claim #{index + 1}</span>
-          {entry.proofLink && <a className="proof-link" href={entry.proofLink} target="_blank" rel="noreferrer">proof ↗</a>}
-        </div>)}
+        </a>)}
       </div>
     </section>
 
