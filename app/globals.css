@@ -46,8 +46,8 @@ h1 .accent { color: var(--accent); }
 .text-field input, .url-field input { width: 100%; height: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); }
 .text-field input::placeholder, .url-field input::placeholder { color: var(--muted); }
 .url-field { gap: 9px; padding-left: 14px; color: var(--muted); }
-.claim-button { min-height: 46px; border: 0; border-radius: 24px; background: #f8b3a4; color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; }
-.claim-button:hover { background: var(--accent); }
+.claim-button { min-height: 46px; border: 0; border-radius: 24px; background: var(--accent); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; transition: background .18s ease; }
+.claim-button:hover { background: #d85f45; }
 .claim-button:disabled { cursor: wait; opacity: .7; }
 .feedback { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: start; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 15px; background: var(--card); }
 .feedback-success { border-color: #b8dfc4; background: #f5fbf6; }
