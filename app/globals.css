@@ -63,6 +63,7 @@ h1 .accent { color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .feedback-text strong { display: block; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
 .feedback-text p { margin: 3px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.share-link { display: inline-flex; margin-top: 10px; color: var(--accent); font-size: 12px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .feedback-dismiss { border: 0; padding: 0; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; transition: background .15s ease, color .15s ease; }
 .feedback-dismiss:hover { color: var(--ink); background: var(--chip); }
 .claim-subline { display: flex; justify-content: space-between; gap: 16px; margin-top: 11px; padding-inline: 14px; color: var(--quiet); font-size: 12px; }

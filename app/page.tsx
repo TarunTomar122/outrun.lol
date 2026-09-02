@@ -66,6 +66,7 @@ export default function Home() {
   const [visits, setVisits] = useState<number | null>(null);
   const [isDev, setIsDev] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   useEffect(() => setIsDev(location.hostname === "localhost" || location.hostname === "127.0.0.1"), []);
 
@@ -121,6 +122,7 @@ export default function Home() {
     event.preventDefault();
     if (submitting) return;
     setSubmitting(true);
+    setShareUrl(null);
     setFeedback({ tone: "info", title: "Checking your Run…", detail: "We’re reading the activity, date, and distance from Strava." });
     try {
       const response = await fetch("/api/profile", {
@@ -135,6 +137,11 @@ export default function Home() {
       }
       await load();
       celebrate();
+      if (result.entry) {
+        const boardUrl = new URL("/#board", window.location.origin).toString();
+        const text = `I'm on the outrunn.lol board with ${host(result.entry.link)}. Join me:`;
+        setShareUrl(`https://twitter.com/intent/tweet?${new URLSearchParams({ text, url: boardUrl })}`);
+      }
       setFeedback({ tone: "success", title: "You’re on the board!", detail: `${result.entry?.name ?? "Your result"} · ${result.entry ? distance(result.entry.distanceKm) : "Distance verified"}. Your link is live.` });
     } catch {
       setFeedback({ tone: "error", title: "The check timed out.", detail: "Strava took too long to respond. Try again in a moment." });
@@ -148,17 +155,17 @@ export default function Home() {
 
     <section id="top" className="intro">
       <div className="live-pill"><span>{(visits ?? entries.length).toLocaleString()} runners visited</span></div>
-      <h1>{entries.length ? <>Run <span className="accent">{distance(entries[0].distanceKm + 0.1)}</span> and claim <span className="accent">#1</span>.</> : <>Post a Run and claim <span className="accent">#1</span>.</>}</h1>
-      <p className="intro-copy">Link your public Strava Run, get verified, and put one link in front of the board.</p>
+      <h1>Promote your app by going for a run.</h1>
+      <p className="intro-copy">Paste your product URL and a Strava Run from the last 7 days.</p>
     </section>
 
     <section id="claim" className="claim-block">
       <form className="claim-form" onSubmit={save}>
-        <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Strava activity URL, share link, or embed" type="text" required aria-label="Strava activity URL, share link, or embed" /></label>
-        <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your link — https://yourthing.com" type="url" required aria-label="Your link" /></label>
-        <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Claim #1"}</button>
+        <label className="url-field"><span aria-hidden="true">◎</span><input value={link} onChange={(event) => setLink(event.target.value)} placeholder="Your product URL, https://yourthing.com" type="url" required aria-label="Your product URL" /></label>
+        <label className="text-field"><input value={proofLink} onChange={(event) => setProofLink(event.target.value)} placeholder="Your Strava Run from the last 7 days" type="text" required aria-label="Your Strava Run from the last 7 days" /></label>
+        <button className="claim-button" type="submit" disabled={submitting}>{submitting ? "Checking…" : me?.entry ? "Update result" : "Submit"}</button>
       </form>
-      {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : <span className="feedback-spinner" />}</span><div className="feedback-text"><strong>{feedback.title}</strong><p>{feedback.detail}</p></div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
+      {feedback && <div className={`feedback feedback-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"} aria-live="polite"><span className="feedback-mark" aria-hidden="true">{feedback.tone === "success" ? "✓" : feedback.tone === "error" ? "!" : <span className="feedback-spinner" />}</span><div className="feedback-text"><strong>{feedback.title}</strong><p>{feedback.detail}</p>{shareUrl && feedback.tone === "success" && <a className="share-link" href={shareUrl} target="_blank" rel="noreferrer">Share your spot on X ↗</a>}</div><button className="feedback-dismiss" type="button" onClick={() => setFeedback(null)} aria-label="Dismiss message">×</button></div>}
       {feedback?.tone === "error" && <div className="error-help">
         <p className="error-help-title">For a run to verify, on Strava:</p>
         <ul>
@@ -168,7 +175,7 @@ export default function Home() {
         </ul>
         <button type="button" className="error-help-video" onClick={() => setShowHelp(true)}><span aria-hidden="true">▶</span> Watch how to submit (29s)</button>
       </div>}
-      <div className="claim-subline"><button type="button" className="subline-link" onClick={() => setShowHelp(true)}>New here? Watch how to submit (29s) ↗</button></div>
+      <div className="claim-subline"><span>Any distance gets a rank. Run farther to move up.</span><button type="button" className="subline-link" onClick={() => setShowHelp(true)}>New here? Watch how to submit (29s) ↗</button></div>
     </section>
 
     <section id="board" className="board" aria-label="Daily running leaderboard">
